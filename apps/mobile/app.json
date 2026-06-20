@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "AI Options",
+    "slug": "ai-options",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "aioptions",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aioptions.calculators"
+    },
+    "android": {
+      "package": "com.aioptions.calculators",
+      "adaptiveIcon": {
+        "backgroundColor": "#0a0a0f"
+      }
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
