@@ -1,56 +1,96 @@
+.pricing-results {
+  padding: 0;
+  overflow: hidden;
+  background: rgba(10, 10, 15, 0.7);
+  border-color: rgba(85, 207, 255, 0.15);
+}
+
+.pricing-results h2 {
+  margin: 0;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 .pricing-results .prices-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 1rem;
+  gap: 8px 16px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .price-card {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 1rem;
-  border: 1px solid rgba(85, 207, 255, 0.15);
-  border-radius: 10px;
-  background: rgba(85, 207, 255, 0.05);
+  gap: 2px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 0;
 }
 
 .price-card-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
+  font-size: 15px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0;
 }
 
 .price-card-value {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--primary);
+}
+
+.greeks-title {
+  margin: 0;
+  padding: 12px 16px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .greeks-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: 15px;
 }
 
 .greeks-table th,
 .greeks-table td {
-  padding: 0.625rem 0.75rem;
-  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.greeks-table tr:last-child td,
+.greeks-table tr:last-child th {
+  border-bottom: none;
 }
 
 .greeks-table th:first-child,
 .greeks-table td:first-child {
   text-align: left;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
 }
 
 .greeks-table th {
-  font-size: 0.75rem;
+  font-size: 13px;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.greeks-table td {
+  font-weight: 600;
+  color: var(--text);
 }

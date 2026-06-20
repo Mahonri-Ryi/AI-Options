@@ -1,158 +1,191 @@
-.results-panel {
-  padding: 1.5rem;
+.form-card.metrics-panel {
+  padding: 0;
+  overflow: hidden;
+  background: rgba(10, 10, 15, 0.7);
+  border-color: rgba(85, 207, 255, 0.15);
 }
 
-.results-empty {
-  padding: 2rem;
-  text-align: center;
-}
-
-.results-empty p {
+.form-card.metrics-panel h2 {
   margin: 0;
-  color: var(--text-muted);
-}
-
-.results-title,
-.greeks-title {
-  margin: 0 0 1rem;
-  font-size: 1.0625rem;
+  padding: 12px 20px;
+  font-size: 15px;
   font-weight: 600;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.greeks-title {
-  margin-top: 1.25rem;
+.results-placeholder {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
+}
+
+.results-placeholder p {
+  margin: 0;
+}
+
+.metrics-content {
+  padding: 0;
+}
+
+.metrics-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.metrics-section:last-child {
+  border-bottom: none;
+}
+
+.section-note,
+.metrics-section-header {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 8px;
+}
+
+.metrics-section-header {
+  margin-bottom: 6px;
 }
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
 }
 
-.metric {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0.875rem 1rem;
-}
-
-.metric-label {
-  display: block;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  margin-bottom: 0.25rem;
-}
-
-.metric-value {
-  font-size: 1.0625rem;
-  font-weight: 600;
-}
-
-.metric-value.profit {
-  color: var(--profit);
-}
-
-.metric-value.loss,
-.metric-value.negative {
-  color: var(--loss);
-}
-
-.metric-value.positive {
-  color: var(--profit);
-}
-
-.metric-badge {
-  display: inline-block;
-  margin-left: 0.5rem;
-  padding: 0.125rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  vertical-align: middle;
-}
-
-.metric-badge.itm {
-  background: rgba(34, 197, 94, 0.15);
-  color: var(--profit);
-}
-
-.metric-badge.atm {
-  background: rgba(148, 163, 184, 0.15);
-  color: var(--text-muted);
-}
-
-.metric-badge.otm {
-  background: rgba(239, 68, 68, 0.12);
-  color: var(--loss);
-}
-
-.metric-secondary.profit {
-  color: var(--profit);
-}
-
-.metric-secondary.loss {
-  color: var(--loss);
-}
-
-.metrics-content {
+.metric-item {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-}
-
-.metrics-section-header {
-  margin: 0 0 0.75rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-}
-
-.metrics-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  gap: 2px;
+  min-width: 0;
 }
 
 .metric-row {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: 1rem;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.02);
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-.metric-row-label {
-  font-size: 0.8125rem;
-  color: var(--text-muted);
+.metric-row:last-child {
+  border-bottom: none;
 }
 
-.metric-row-value {
-  font-size: 1rem;
+.profit-scenarios {
+  padding-bottom: 8px;
+}
+
+.profit-scenarios .metric-row {
+  padding: 3px 0;
+  border-bottom: none;
+}
+
+.metric-label {
+  font-size: 15px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.metric-value {
+  font-size: 16px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.metric-value.positive {
+  color: #2df3b0;
+}
+
+.metric-value.negative {
+  color: #ff6b6b;
+}
+
+.metric-value-compound {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
   text-align: right;
 }
 
-.metric-row-value.profit {
-  color: var(--profit);
+.metric-primary {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
 }
 
-.metric-row-value.loss {
-  color: var(--loss);
+.metric-primary.positive {
+  color: #2df3b0;
+}
+
+.metric-primary.negative {
+  color: #ff6b6b;
 }
 
 .metric-secondary {
-  font-size: 0.8125rem;
-  color: var(--text-muted);
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.metric-secondary.positive {
+  color: #2df3b0;
+}
+
+.metric-secondary.negative {
+  color: #ff6b6b;
+}
+
+.metric-note {
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+}
+
+.metric-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.metric-badge.itm {
+  background: rgba(45, 243, 176, 0.15);
+  color: #2df3b0;
+}
+
+.metric-badge.otm {
+  background: rgba(255, 107, 107, 0.15);
+  color: #ff6b6b;
+}
+
+.metric-badge.atm {
+  background: rgba(85, 207, 255, 0.15);
+  color: #55cfff;
+}
+
+@media (min-width: 768px) and (max-width: 968px) {
+  .profit-scenarios .metric-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
 }
 
 @media (max-width: 480px) {

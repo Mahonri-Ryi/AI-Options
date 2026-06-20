@@ -15,8 +15,8 @@ export function PricingResults({ pricing }: PricingResultsProps) {
   ];
 
   return (
-    <section className="results-panel card metrics-panel pricing-results">
-      <h2 className="results-title">Results</h2>
+    <section className="results-panel card metrics-panel pricing-results form-card">
+      <h2>Results</h2>
       <div className="prices-grid">
         <div className="price-card">
           <span className="price-card-label">CALL</span>
