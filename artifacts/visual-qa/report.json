@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-06-20T15:27:47.819Z",
+  "passed": [
+    "long-call",
+    "long-put",
+    "short-call",
+    "short-put",
+    "bull-call-spread",
+    "bull-put-spread",
+    "bear-put-spread",
+    "bear-call-spread",
+    "covered-call",
+    "cash-secured-put",
+    "pmcc",
+    "straddle",
+    "strangle",
+    "iron-condor",
+    "iron-butterfly",
+    "options-pricing",
+    "implied-volatility",
+    "theta-decay",
+    "expected-move"
+  ],
+  "failed": [],
+  "issues": []
+}

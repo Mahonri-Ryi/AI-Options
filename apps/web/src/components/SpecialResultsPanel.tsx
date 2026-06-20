@@ -5,15 +5,24 @@ function formatMoney(value: number): string {
   return `$${value.toFixed(2)}`;
 }
 
-export function ExpectedMoveResults({ detail, stockPrice }: { detail: ExpectedMoveDetail; stockPrice: number }) {
+export function ExpectedMoveResults({
+  detail,
+  stockPrice,
+}: {
+  detail: ExpectedMoveDetail;
+  stockPrice: number;
+}) {
   const movePct = ((detail.expectedMove / stockPrice) * 100).toFixed(1);
   return (
-    <section className="results-panel card special-results">
+    <section className="results-panel card special-results metrics-panel">
       <h2 className="results-title">Expected Move</h2>
       <div className="metrics-grid">
         <div className="metric">
           <span className="metric-label">Expected Move</span>
-          <span className="metric-value">±{formatMoney(detail.expectedMove)} <span className="metric-secondary">({movePct}%)</span></span>
+          <span className="metric-value">
+            ±{formatMoney(detail.expectedMove)}{' '}
+            <span className="metric-secondary">({movePct}%)</span>
+          </span>
         </div>
         <div className="metric">
           <span className="metric-label">Upper Bound</span>
@@ -22,10 +31,6 @@ export function ExpectedMoveResults({ detail, stockPrice }: { detail: ExpectedMo
         <div className="metric">
           <span className="metric-label">Lower Bound</span>
           <span className="metric-value loss">{formatMoney(detail.lowerBound)}</span>
-        </div>
-        <div className="metric">
-          <span className="metric-label">Probability</span>
-          <span className="metric-value">{detail.probability}%</span>
         </div>
         <div className="metric">
           <span className="metric-label">Daily Move</span>
@@ -42,14 +47,16 @@ export function ExpectedMoveResults({ detail, stockPrice }: { detail: ExpectedMo
 
 export function ThetaDecayResults({ detail }: { detail: ThetaDecayDetail }) {
   return (
-    <section className="results-panel card special-results">
+    <section className="results-panel card special-results metrics-panel">
       <h2 className="results-title">Key Metrics</h2>
       <div className="metrics-grid">
         <div className="metric">
           <span className="metric-label">Entry Price</span>
           <span className="metric-value">
             {formatMoney(detail.entryPrice)}
-            <span className={`metric-badge ${detail.moneyness.toLowerCase()}`}>{detail.moneyness}</span>
+            <span className={`metric-badge ${detail.moneyness.toLowerCase()}`}>
+              {detail.moneyness}
+            </span>
           </span>
         </div>
         <div className="metric">
@@ -57,14 +64,8 @@ export function ThetaDecayResults({ detail }: { detail: ThetaDecayDetail }) {
           <span className="metric-value">{formatMoney(detail.expirationValue)}</span>
         </div>
         <div className="metric">
-          <span className="metric-label">Total Decay</span>
-          <span className="metric-value loss">
-            {formatMoney(detail.totalDecay)} <span className="metric-secondary">({detail.totalDecayPercent.toFixed(1)}%)</span>
-          </span>
-        </div>
-        <div className="metric">
-          <span className="metric-label">Initial Theta</span>
-          <span className="metric-value loss">{detail.currentTheta.toFixed(3)}</span>
+          <span className="metric-label">Intrinsic Value</span>
+          <span className="metric-value">{formatMoney(detail.intrinsicValue)}</span>
         </div>
         <div className="metric">
           <span className="metric-label">Extrinsic Value</span>
@@ -74,6 +75,10 @@ export function ThetaDecayResults({ detail }: { detail: ThetaDecayDetail }) {
               ({detail.entryPrice > 0 ? ((detail.extrinsicValue / detail.entryPrice) * 100).toFixed(0) : 0}%)
             </span>
           </span>
+        </div>
+        <div className="metric">
+          <span className="metric-label">Initial Theta</span>
+          <span className="metric-value loss">{detail.currentTheta.toFixed(3)}</span>
         </div>
         <div className="metric">
           <span className="metric-label">Extrinsic Half-Life</span>

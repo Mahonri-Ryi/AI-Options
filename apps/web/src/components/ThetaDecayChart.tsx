@@ -1,12 +1,13 @@
-import type { ThetaDecayChartData } from '@ai-options/core';
+import type { ThetaDecayChartData, ThetaDecayDetail } from '@ai-options/core';
 import './ExpectedMoveChart.css';
 
 interface ThetaDecayChartProps {
   data: ThetaDecayChartData;
   entryDte: number;
+  detail?: ThetaDecayDetail;
 }
 
-export function ThetaDecayChart({ data, entryDte }: ThetaDecayChartProps) {
+export function ThetaDecayChart({ data, entryDte, detail }: ThetaDecayChartProps) {
   const { decayCurve, intrinsicLine } = data;
   if (decayCurve.length < 2) return null;
 
@@ -40,8 +41,11 @@ export function ThetaDecayChart({ data, entryDte }: ThetaDecayChartProps) {
     .map((p) => `L ${x(p.dte)} ${y(p.optionPrice)}`)
     .join(' ')} Z`;
 
+  const intrinsicValue = detail?.intrinsicValue ?? intrinsicLine[0]?.optionPrice ?? 0;
+  const halfLife = detail?.extrinsicHalfLifeDays;
+
   return (
-    <div className="theta-decay-chart">
+    <div className="theta-decay-chart chart-container">
       <svg viewBox={`0 0 ${width} ${height}`} className="theta-svg">
         <path d={extrinsicPath} className="theta-extrinsic-fill" />
         <path d={intrinsicPath} className="theta-intrinsic-line" fill="none" />
@@ -64,12 +68,22 @@ export function ThetaDecayChart({ data, entryDte }: ThetaDecayChartProps) {
       <div className="theta-legend">
         <span className="legend-item">
           <span className="legend-swatch theoretical-swatch" />
-          Option price
+          Option Price
+        </span>
+        <span className="legend-item">
+          <span className="legend-swatch em-swatch" />
+          Extrinsic (Time) Value
         </span>
         <span className="legend-item">
           <span className="legend-dash theta-dash" />
-          Intrinsic value
+          Intrinsic Value: ${intrinsicValue.toFixed(2)}
         </span>
+        {halfLife != null ? (
+          <span className="legend-item">
+            <span className="legend-dash em-dash" />
+            Extrinsic Half-Life: {halfLife} DTE
+          </span>
+        ) : null}
       </div>
     </div>
   );

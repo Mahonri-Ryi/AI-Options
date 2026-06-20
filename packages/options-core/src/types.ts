@@ -57,13 +57,70 @@ export interface StrategyMetrics {
   greeks?: Greeks;
 }
 
+export type ChartSeriesStyle = 'theoretical' | 'expiration' | 'stock';
+
+export interface ChartSeries {
+  id: string;
+  label: string;
+  data: PnLPoint[];
+  style: ChartSeriesStyle;
+}
+
+export type ChartMarkerType = 'current' | 'strike' | 'breakeven' | 'longStrike' | 'shortStrike';
+
+export interface ChartMarker {
+  type: ChartMarkerType;
+  value: number;
+  label?: string;
+  color?: string;
+  dashStyle?: 'solid' | 'dashed' | 'dotted';
+}
+
+export interface MetricItem {
+  label: string;
+  value: string;
+  variant?: 'profit' | 'loss' | 'neutral' | 'positive' | 'negative';
+  secondary?: string;
+  secondaryVariant?: 'profit' | 'loss' | 'neutral' | 'positive' | 'negative';
+  badge?: 'ITM' | 'OTM' | 'ATM';
+  note?: string;
+}
+
+export interface MetricSection {
+  title?: string;
+  layout: 'grid' | 'rows';
+  items: MetricItem[];
+}
+
+export interface CalculatorVisualization {
+  chartTitle: string;
+  chartTitleShort?: string;
+  chartSubtitle?: string;
+  chartSeries: ChartSeries[];
+  chartMarkers: ChartMarker[];
+  metricSections: MetricSection[];
+  chartNote?: string;
+}
+
+export interface PricingResult {
+  callPrice: number;
+  putPrice: number;
+  callGreeks: Greeks;
+  putGreeks: Greeks;
+  model: 'bs' | 'crr';
+}
+
 export interface CalculatorResult {
   metrics: StrategyMetrics;
   curve: PnLPoint[];
   theoreticalCurve?: PnLPoint[];
+  stockComparisonCurve?: PnLPoint[];
   chartRange?: ChartRange;
   chartAxes?: ChartAxes;
   greeks?: Greeks;
+  visualization?: CalculatorVisualization;
+  pricingResult?: PricingResult;
+  ivConverged?: boolean;
   expectedMoveDetail?: ExpectedMoveDetail;
   expectedMoveCone?: ExpectedMoveConePoint[];
   thetaDecayDetail?: ThetaDecayDetail;

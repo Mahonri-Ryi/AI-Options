@@ -79,8 +79,13 @@ export function buildChartAxes(
   range: PriceRange,
   expirationCurve: PnLPoint[],
   theoreticalCurve?: PnLPoint[],
+  extraCurves: PnLPoint[][] = [],
 ): ChartAxes {
-  const curves = theoreticalCurve ? [expirationCurve, theoreticalCurve] : [expirationCurve];
+  const curves = [
+    expirationCurve,
+    ...(theoreticalCurve ? [theoreticalCurve] : []),
+    ...extraCurves,
+  ];
   const yDomain = chartYDomain(curves);
   return {
     xTicks: nicePriceTicks(range.min, range.max),

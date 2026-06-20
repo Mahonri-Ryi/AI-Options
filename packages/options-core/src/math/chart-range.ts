@@ -46,6 +46,22 @@ export function spreadChartRange(
   };
 }
 
+/** PMCC chart range (20% stock floor on padding, uses long DTE) */
+export function pmccChartRange(
+  stockPrice: number,
+  longStrike: number,
+  shortStrike: number,
+  longDte: number,
+  ivPercent: number,
+): PriceRange {
+  const move = expectedMoveDollars(stockPrice, longDte, ivPercent);
+  const padding = Math.max(move * 1.5, stockPrice * 0.2);
+  return {
+    min: Math.max(0.01, Math.min(stockPrice, longStrike) - padding),
+    max: Math.max(stockPrice, shortStrike) + padding,
+  };
+}
+
 /** Covered call chart range (20% expected move multiplier) */
 export function coveredCallChartRange(
   stockPrice: number,
