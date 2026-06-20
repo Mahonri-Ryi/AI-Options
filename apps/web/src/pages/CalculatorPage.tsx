@@ -96,9 +96,14 @@ export function CalculatorPage() {
           {result && result.curve.length > 1 ? (
             <section className="chart-panel card">
               <h2 className="panel-title">
-                {id === 'theta-decay' ? 'Theta Decay Curve' : 'P/L at Expiration'}
+                {id === 'theta-decay' ? 'Theta Decay Curve' : 'P/L Chart'}
               </h2>
-              <PnLChart data={result.curve} currentPrice={stockPrice} />
+              <PnLChart
+                data={result.curve}
+                theoreticalData={result.theoreticalCurve}
+                currentPrice={stockPrice}
+                chartAxes={result.chartAxes}
+              />
             </section>
           ) : null}
         </div>

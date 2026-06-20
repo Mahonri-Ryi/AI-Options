@@ -61,6 +61,7 @@ export const CALCULATOR_CONFIGS: Record<string, CalculatorConfig> = {
       { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
       { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
       { key: 'riskFreeRate', label: 'Rate', defaultValue: '5', suffix: '%' },
+      { key: 'dividendYield', label: 'Div Yield', defaultValue: '0', suffix: '%' },
       { key: 'quantity', label: 'Contracts', defaultValue: '1' },
     ],
     compute: (values) =>
@@ -72,9 +73,10 @@ export const CALCULATOR_CONFIGS: Record<string, CalculatorConfig> = {
     fields: [
       { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
       { key: 'strike', label: 'Strike', defaultValue: '95' },
-      { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
-      { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '60' },
+      { key: 'iv', label: 'IV', defaultValue: '30', suffix: '%' },
       { key: 'riskFreeRate', label: 'Rate', defaultValue: '5', suffix: '%' },
+      { key: 'dividendYield', label: 'Div Yield', defaultValue: '0', suffix: '%' },
       { key: 'quantity', label: 'Contracts', defaultValue: '1' },
     ],
     compute: (values) =>
@@ -86,9 +88,10 @@ export const CALCULATOR_CONFIGS: Record<string, CalculatorConfig> = {
     fields: [
       { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
       { key: 'strike', label: 'Strike', defaultValue: '105' },
-      { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
-      { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '60' },
+      { key: 'iv', label: 'IV', defaultValue: '30', suffix: '%' },
       { key: 'riskFreeRate', label: 'Rate', defaultValue: '5', suffix: '%' },
+      { key: 'dividendYield', label: 'Div Yield', defaultValue: '0', suffix: '%' },
       { key: 'quantity', label: 'Contracts', defaultValue: '1' },
     ],
     compute: (values) =>
@@ -100,9 +103,10 @@ export const CALCULATOR_CONFIGS: Record<string, CalculatorConfig> = {
     fields: [
       { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
       { key: 'strike', label: 'Strike', defaultValue: '95' },
-      { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
-      { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '60' },
+      { key: 'iv', label: 'IV', defaultValue: '30', suffix: '%' },
       { key: 'riskFreeRate', label: 'Rate', defaultValue: '5', suffix: '%' },
+      { key: 'dividendYield', label: 'Div Yield', defaultValue: '0', suffix: '%' },
       { key: 'quantity', label: 'Contracts', defaultValue: '1' },
     ],
     compute: (values) =>
@@ -170,10 +174,12 @@ export const CALCULATOR_CONFIGS: Record<string, CalculatorConfig> = {
     title: 'Bear Call Spread',
     fields: [
       { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
+      { key: 'shortStrike', label: 'Short Strike', defaultValue: '105' },
       { key: 'longStrike', label: 'Long Strike', defaultValue: '110' },
-      { key: 'shortStrike', label: 'Short Strike', defaultValue: '100' },
       { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
       { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'riskFreeRate', label: 'Rate', defaultValue: '5', suffix: '%' },
+      { key: 'dividendYield', label: 'Div Yield', defaultValue: '0', suffix: '%' },
       { key: 'quantity', label: 'Contracts', defaultValue: '1' },
     ],
     compute: (values) =>
@@ -189,17 +195,18 @@ export const CALCULATOR_CONFIGS: Record<string, CalculatorConfig> = {
     title: 'Covered Call',
     fields: [
       { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
-      { key: 'shareCostBasis', label: 'Cost Basis', defaultValue: '95' },
       { key: 'strike', label: 'Call Strike', defaultValue: '105' },
-      { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
-      { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '60' },
+      { key: 'iv', label: 'IV', defaultValue: '30', suffix: '%' },
+      { key: 'riskFreeRate', label: 'Rate', defaultValue: '5', suffix: '%' },
+      { key: 'dividendYield', label: 'Div Yield', defaultValue: '0', suffix: '%' },
       { key: 'quantity', label: 'Contracts', defaultValue: '1' },
     ],
     compute: (values) =>
       coveredCall({
         ...baseInputs(values),
         strike: num(values, 'strike'),
-        shareCostBasis: num(values, 'shareCostBasis'),
+        shareCostBasis: num(values, 'stockPrice'),
       }),
   },
   'cash-secured-put': {
@@ -219,12 +226,14 @@ export const CALCULATOR_CONFIGS: Record<string, CalculatorConfig> = {
     id: 'pmcc',
     title: "Poor Man's Covered Call",
     fields: [
-      { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
-      { key: 'longStrike', label: 'Long Call Strike', defaultValue: '80' },
-      { key: 'shortStrike', label: 'Short Call Strike', defaultValue: '105' },
-      { key: 'longDte', label: 'Long DTE', defaultValue: '180' },
-      { key: 'shortDte', label: 'Short DTE', defaultValue: '30' },
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '185' },
+      { key: 'longStrike', label: 'Long Call Strike', defaultValue: '180' },
+      { key: 'shortStrike', label: 'Short Call Strike', defaultValue: '220' },
+      { key: 'longDte', label: 'Long DTE', defaultValue: '365' },
+      { key: 'shortDte', label: 'Short DTE', defaultValue: '60' },
       { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'riskFreeRate', label: 'Rate', defaultValue: '4', suffix: '%' },
+      { key: 'dividendYield', label: 'Div Yield', defaultValue: '0', suffix: '%' },
       { key: 'quantity', label: 'Contracts', defaultValue: '1' },
     ],
     compute: (values) =>
@@ -244,6 +253,8 @@ export const CALCULATOR_CONFIGS: Record<string, CalculatorConfig> = {
       { key: 'strike', label: 'Strike', defaultValue: '100' },
       { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
       { key: 'iv', label: 'IV', defaultValue: '30', suffix: '%' },
+      { key: 'riskFreeRate', label: 'Rate', defaultValue: '4.5', suffix: '%' },
+      { key: 'dividendYield', label: 'Div Yield', defaultValue: '0', suffix: '%' },
       { key: 'positionType', label: 'Position (long/short)', defaultValue: 'long' },
       { key: 'quantity', label: 'Contracts', defaultValue: '1' },
     ],
@@ -263,6 +274,8 @@ export const CALCULATOR_CONFIGS: Record<string, CalculatorConfig> = {
       { key: 'callStrike', label: 'Call Strike', defaultValue: '105' },
       { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
       { key: 'iv', label: 'IV', defaultValue: '30', suffix: '%' },
+      { key: 'riskFreeRate', label: 'Rate', defaultValue: '4.5', suffix: '%' },
+      { key: 'dividendYield', label: 'Div Yield', defaultValue: '0', suffix: '%' },
       { key: 'positionType', label: 'Position (long/short)', defaultValue: 'long' },
       { key: 'quantity', label: 'Contracts', defaultValue: '1' },
     ],
@@ -360,10 +373,11 @@ export const CALCULATOR_CONFIGS: Record<string, CalculatorConfig> = {
     title: 'Implied Volatility',
     fields: [
       { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
-      { key: 'strike', label: 'Strike', defaultValue: '105' },
-      { key: 'dte', label: 'Days to Exp', defaultValue: '45' },
-      { key: 'optionPrice', label: 'Option Price', defaultValue: '2.50' },
+      { key: 'strike', label: 'Strike', defaultValue: '100' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
+      { key: 'optionPrice', label: 'Option Price', defaultValue: '5.50' },
       { key: 'riskFreeRate', label: 'Rate', defaultValue: '4.5', suffix: '%' },
+      { key: 'dividendYield', label: 'Div Yield', defaultValue: '0', suffix: '%' },
       { key: 'optionType', label: 'Type (call/put)', defaultValue: 'call' },
     ],
     compute: (values) => {
@@ -396,6 +410,7 @@ export const CALCULATOR_CONFIGS: Record<string, CalculatorConfig> = {
       { key: 'dte', label: 'Days to Exp', defaultValue: '45' },
       { key: 'iv', label: 'IV', defaultValue: '30', suffix: '%' },
       { key: 'riskFreeRate', label: 'Rate', defaultValue: '4.5', suffix: '%' },
+      { key: 'dividendYield', label: 'Div Yield', defaultValue: '0', suffix: '%' },
       { key: 'optionType', label: 'Type (call/put)', defaultValue: 'call' },
     ],
     compute: (values) => {

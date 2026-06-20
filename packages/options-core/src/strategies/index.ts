@@ -2,14 +2,25 @@ import type { CalculatorResult, Greeks, OptionLeg, StockLeg } from '../types.js'
 import { calculateGreeks, optionPrice } from '../math/black-scholes.js';
 import {
   aggregateGreeks,
+  analyticalBreakeven,
+  buildChartAxes,
   buildPnLCurve,
+  buildSteppedCurves,
   evaluateOptionLeg,
   evaluateStockLeg,
   findBreakevens,
   findMaxProfitLoss,
-  generatePriceRange,
   legGreeks,
+  spreadBreakeven,
 } from '../math/curve.js';
+import {
+  coveredCallChartRange,
+  multiStrikeChartRange,
+  singleLegChartRange,
+  singleLegStepSize,
+  spreadChartRange,
+  spreadStepSize,
+} from '../math/chart-range.js';
 import { impliedVolatility } from '../math/volatility.js';
 
 export interface BaseInputs {
@@ -117,7 +128,6 @@ function singleLegMetrics(
 
 function buildSingleLegResult(
   inputs: SingleLegInputs,
-  atExpiration = true,
 ): CalculatorResult {
   const premium = resolvePremium(inputs.type, inputs);
   const leg: OptionLeg = {
@@ -140,23 +150,42 @@ function buildSingleLegResult(
         inputs.dividendYield,
       );
 
-  const range = generatePriceRange(inputs.stockPrice, [inputs.strike]);
-  const curve = buildPnLCurve(
+  const roundedPremium = Math.round(premium * 100) / 100;
+  leg.premium = roundedPremium;
+
+  const chartRange = singleLegChartRange(
+    inputs.stockPrice,
+    inputs.strike,
+    inputs.dte,
+    iv,
+  );
+  const step = singleLegStepSize(chartRange.max - chartRange.min);
+  const { expirationCurve, theoreticalCurve } = buildSteppedCurves(
+    chartRange,
+    step,
     (price) =>
       evaluateOptionLeg(
         leg,
         price,
-        atExpiration,
+        true,
         inputs.dte,
         iv,
         inputs.riskFreeRate,
         inputs.dividendYield,
       ),
-    range.min,
-    range.max,
+    (price) =>
+      evaluateOptionLeg(
+        leg,
+        price,
+        false,
+        inputs.dte,
+        iv,
+        inputs.riskFreeRate,
+        inputs.dividendYield,
+      ),
   );
 
-  const { maxProfit, maxLoss } = singleLegMetrics(leg, premium);
+  const { maxProfit, maxLoss } = singleLegMetrics(leg, roundedPremium);
   const greeks = legGreeks(
     leg,
     inputs.stockPrice,
@@ -171,12 +200,17 @@ function buildSingleLegResult(
     metrics: {
       maxProfit,
       maxLoss,
-      breakevens: findBreakevens(curve),
-      netPremium: inputs.side === 'short' ? premium : -premium,
-      premium,
+      breakevens: [
+        analyticalBreakeven(inputs.type, inputs.side, inputs.strike, roundedPremium),
+      ],
+      netPremium: inputs.side === 'short' ? roundedPremium : -roundedPremium,
+      premium: roundedPremium,
       greeks: signedGreeks,
     },
-    curve,
+    curve: expirationCurve,
+    theoreticalCurve,
+    chartRange,
+    chartAxes: buildChartAxes(chartRange, expirationCurve, theoreticalCurve),
     greeks: signedGreeks,
   };
 }
@@ -243,13 +277,24 @@ function buildVerticalSpread(
   };
 
   const iv = inputs.iv ?? 25;
-  const range = generatePriceRange(inputs.stockPrice, [inputs.longStrike, inputs.shortStrike]);
-  const curve = buildPnLCurve((price) => {
-    return (
+  const chartRange = spreadChartRange(
+    inputs.stockPrice,
+    inputs.longStrike,
+    inputs.shortStrike,
+    inputs.dte,
+    iv,
+  );
+  const step = spreadStepSize(chartRange.max - chartRange.min);
+  const { expirationCurve, theoreticalCurve } = buildSteppedCurves(
+    chartRange,
+    step,
+    (price) =>
       evaluateOptionLeg(longLeg, price, true, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield) +
-      evaluateOptionLeg(shortLeg, price, true, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield)
-    );
-  }, range.min, range.max);
+      evaluateOptionLeg(shortLeg, price, true, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield),
+    (price) =>
+      evaluateOptionLeg(longLeg, price, false, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield) +
+      evaluateOptionLeg(shortLeg, price, false, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield),
+  );
 
   const width = Math.abs(inputs.shortStrike - inputs.longStrike);
   const maxProfit = isCredit
@@ -267,16 +312,26 @@ function buildVerticalSpread(
     ],
   );
 
+  const breakeven = spreadBreakeven(
+    inputs.longStrike,
+    inputs.shortStrike,
+    debit,
+    longType,
+  );
+
   return {
     metrics: {
       maxProfit,
       maxLoss,
-      breakevens: findBreakevens(curve),
+      breakevens: [breakeven],
       netPremium,
       premium: longPremium,
       greeks,
     },
-    curve,
+    curve: expirationCurve,
+    theoreticalCurve,
+    chartRange,
+    chartAxes: buildChartAxes(chartRange, expirationCurve, theoreticalCurve),
     greeks,
   };
 }
@@ -346,25 +401,33 @@ export function straddle(inputs: StraddleInputs): CalculatorResult {
   const callLeg: OptionLeg = { type: 'call', side, strike: inputs.strike, quantity: inputs.quantity, premium: callPremium };
   const putLeg: OptionLeg = { type: 'put', side, strike: inputs.strike, quantity: inputs.quantity, premium: putPremium };
 
-  const range = generatePriceRange(inputs.stockPrice, [inputs.strike]);
-  const curve = buildPnLCurve((price) => {
-    return (
+  const chartRange = singleLegChartRange(inputs.stockPrice, inputs.strike, inputs.dte, iv);
+  const step = singleLegStepSize(chartRange.max - chartRange.min);
+  const { expirationCurve, theoreticalCurve } = buildSteppedCurves(
+    chartRange,
+    step,
+    (price) =>
       evaluateOptionLeg(callLeg, price, true, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield) +
-      evaluateOptionLeg(putLeg, price, true, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield)
-    );
-  }, range.min, range.max);
+      evaluateOptionLeg(putLeg, price, true, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield),
+    (price) =>
+      evaluateOptionLeg(callLeg, price, false, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield) +
+      evaluateOptionLeg(putLeg, price, false, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield),
+  );
 
-  const { maxProfit, maxLoss } = findMaxProfitLoss(curve);
+  const { maxProfit, maxLoss } = findMaxProfitLoss(expirationCurve);
 
   return {
     metrics: {
       maxProfit,
       maxLoss,
-      breakevens: findBreakevens(curve),
+      breakevens: findBreakevens(expirationCurve),
       netPremium: side === 'short' ? netPremium : -netPremium,
       premium: netPremium,
     },
-    curve,
+    curve: expirationCurve,
+    theoreticalCurve,
+    chartRange,
+    chartAxes: buildChartAxes(chartRange, expirationCurve, theoreticalCurve),
   };
 }
 
@@ -397,25 +460,38 @@ export function strangle(inputs: StrangleInputs): CalculatorResult {
   const callLeg: OptionLeg = { type: 'call', side, strike: inputs.callStrike, quantity: inputs.quantity, premium: callPremium };
   const putLeg: OptionLeg = { type: 'put', side, strike: inputs.putStrike, quantity: inputs.quantity, premium: putPremium };
 
-  const range = generatePriceRange(inputs.stockPrice, [inputs.callStrike, inputs.putStrike]);
-  const curve = buildPnLCurve((price) => {
-    return (
+  const chartRange = multiStrikeChartRange(
+    inputs.stockPrice,
+    [inputs.putStrike, inputs.callStrike],
+    inputs.dte,
+    iv,
+  );
+  const step = spreadStepSize(chartRange.max - chartRange.min);
+  const { expirationCurve, theoreticalCurve } = buildSteppedCurves(
+    chartRange,
+    step,
+    (price) =>
       evaluateOptionLeg(callLeg, price, true, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield) +
-      evaluateOptionLeg(putLeg, price, true, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield)
-    );
-  }, range.min, range.max);
+      evaluateOptionLeg(putLeg, price, true, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield),
+    (price) =>
+      evaluateOptionLeg(callLeg, price, false, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield) +
+      evaluateOptionLeg(putLeg, price, false, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield),
+  );
 
-  const { maxProfit, maxLoss } = findMaxProfitLoss(curve);
+  const { maxProfit, maxLoss } = findMaxProfitLoss(expirationCurve);
 
   return {
     metrics: {
       maxProfit,
       maxLoss,
-      breakevens: findBreakevens(curve),
+      breakevens: findBreakevens(expirationCurve),
       netPremium: side === 'short' ? netPremium : -netPremium,
       premium: netPremium,
     },
-    curve,
+    curve: expirationCurve,
+    theoreticalCurve,
+    chartRange,
+    chartAxes: buildChartAxes(chartRange, expirationCurve, theoreticalCurve),
   };
 }
 
@@ -435,14 +511,29 @@ export function ironCondor(inputs: IronCondorInputs): CalculatorResult {
   }
 
   const netPremium = legs.reduce((sum, leg) => sum + (leg.side === 'short' ? leg.premium : -leg.premium), 0);
-  const range = generatePriceRange(inputs.stockPrice, legs.map((l) => l.strike));
-  const curve = buildPnLCurve((price) => {
-    return legs.reduce(
-      (sum, leg) =>
-        sum + evaluateOptionLeg(leg, price, true, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield),
-      0,
-    );
-  }, range.min, range.max);
+  const chartRange = multiStrikeChartRange(
+    inputs.stockPrice,
+    legs.map((l) => l.strike),
+    inputs.dte,
+    iv,
+  );
+  const step = spreadStepSize(chartRange.max - chartRange.min);
+  const { expirationCurve, theoreticalCurve } = buildSteppedCurves(
+    chartRange,
+    step,
+    (price) =>
+      legs.reduce(
+        (sum, leg) =>
+          sum + evaluateOptionLeg(leg, price, true, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield),
+        0,
+      ),
+    (price) =>
+      legs.reduce(
+        (sum, leg) =>
+          sum + evaluateOptionLeg(leg, price, false, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield),
+        0,
+      ),
+  );
 
   const putWidth = inputs.shortPutStrike - inputs.longPutStrike;
   const callWidth = inputs.longCallStrike - inputs.shortCallStrike;
@@ -452,11 +543,14 @@ export function ironCondor(inputs: IronCondorInputs): CalculatorResult {
     metrics: {
       maxProfit: netPremium * 100 * inputs.quantity,
       maxLoss: (wingWidth - netPremium) * 100 * inputs.quantity,
-      breakevens: findBreakevens(curve),
+      breakevens: findBreakevens(expirationCurve),
       netPremium,
       premium: netPremium,
     },
-    curve,
+    curve: expirationCurve,
+    theoreticalCurve,
+    chartRange,
+    chartAxes: buildChartAxes(chartRange, expirationCurve, theoreticalCurve),
   };
 }
 
@@ -484,10 +578,11 @@ export function coveredCall(inputs: CoveredCallInputs): CalculatorResult {
           inputs.dividendYield,
         );
 
+  const costBasis = inputs.shareCostBasis ?? inputs.stockPrice;
   const stockLeg: StockLeg = {
     side: 'long',
     quantity: inputs.quantity,
-    costBasis: inputs.shareCostBasis,
+    costBasis,
   };
   const callLeg: OptionLeg = {
     type: 'call',
@@ -497,26 +592,42 @@ export function coveredCall(inputs: CoveredCallInputs): CalculatorResult {
     premium: callPremium,
   };
 
-  const range = generatePriceRange(inputs.stockPrice, [inputs.strike, inputs.shareCostBasis]);
-  const curve = buildPnLCurve((price) => {
-    return (
-      evaluateStockLeg(stockLeg, price) +
-      evaluateOptionLeg(callLeg, price, true, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield)
-    );
-  }, range.min, range.max);
+  const roundedPremium = Math.round(callPremium * 100) / 100;
+  callLeg.premium = roundedPremium;
 
-  const maxProfit = (inputs.strike - inputs.shareCostBasis + callPremium) * 100 * inputs.quantity;
-  const maxLoss = (inputs.shareCostBasis - callPremium) * 100 * inputs.quantity;
+  const chartRange = coveredCallChartRange(
+    inputs.stockPrice,
+    inputs.strike,
+    inputs.dte,
+    iv,
+  );
+  const step = singleLegStepSize(chartRange.max - chartRange.min);
+  const { expirationCurve, theoreticalCurve } = buildSteppedCurves(
+    chartRange,
+    step,
+    (price) =>
+      evaluateStockLeg(stockLeg, price) +
+      evaluateOptionLeg(callLeg, price, true, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield),
+    (price) =>
+      evaluateStockLeg(stockLeg, price) +
+      evaluateOptionLeg(callLeg, price, false, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield),
+  );
+
+  const maxProfit = (inputs.strike - costBasis + roundedPremium) * 100 * inputs.quantity;
+  const maxLoss = (costBasis - roundedPremium) * 100 * inputs.quantity;
 
   return {
     metrics: {
       maxProfit,
       maxLoss,
-      breakevens: findBreakevens(curve),
-      netPremium: callPremium,
-      premium: callPremium,
+      breakevens: [costBasis - roundedPremium],
+      netPremium: roundedPremium,
+      premium: roundedPremium,
     },
-    curve,
+    curve: expirationCurve,
+    theoreticalCurve,
+    chartRange,
+    chartAxes: buildChartAxes(chartRange, expirationCurve, theoreticalCurve),
   };
 }
 
@@ -567,23 +678,37 @@ export function poorMansCoveredCall(inputs: PMCCInputs): CalculatorResult {
     premium: shortPremium,
   };
 
-  const range = generatePriceRange(inputs.stockPrice, [inputs.longStrike, inputs.shortStrike]);
-  const curve = buildPnLCurve((price) => {
-    return (
+  const chartRange = spreadChartRange(
+    inputs.stockPrice,
+    inputs.longStrike,
+    inputs.shortStrike,
+    inputs.shortDte,
+    shortIv,
+  );
+  const step = spreadStepSize(chartRange.max - chartRange.min);
+  const { expirationCurve, theoreticalCurve } = buildSteppedCurves(
+    chartRange,
+    step,
+    (price) =>
       evaluateOptionLeg(longLeg, price, true, inputs.longDte, longIv, inputs.riskFreeRate, inputs.dividendYield) +
-      evaluateOptionLeg(shortLeg, price, true, inputs.shortDte, shortIv, inputs.riskFreeRate, inputs.dividendYield)
-    );
-  }, range.min, range.max);
+      evaluateOptionLeg(shortLeg, price, true, inputs.shortDte, shortIv, inputs.riskFreeRate, inputs.dividendYield),
+    (price) =>
+      evaluateOptionLeg(longLeg, price, false, inputs.longDte, longIv, inputs.riskFreeRate, inputs.dividendYield) +
+      evaluateOptionLeg(shortLeg, price, false, inputs.shortDte, shortIv, inputs.riskFreeRate, inputs.dividendYield),
+  );
 
   return {
     metrics: {
-      maxProfit: findMaxProfitLoss(curve).maxProfit,
+      maxProfit: findMaxProfitLoss(expirationCurve).maxProfit,
       maxLoss: longPremium * 100 * inputs.quantity,
-      breakevens: findBreakevens(curve),
+      breakevens: findBreakevens(expirationCurve),
       netPremium: shortPremium - longPremium,
       premium: longPremium,
     },
-    curve,
+    curve: expirationCurve,
+    theoreticalCurve,
+    chartRange,
+    chartAxes: buildChartAxes(chartRange, expirationCurve, theoreticalCurve),
   };
 }
 

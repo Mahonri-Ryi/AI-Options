@@ -37,6 +37,17 @@ export interface PnLPoint {
   theoreticalValue?: number;
 }
 
+export interface ChartRange {
+  min: number;
+  max: number;
+}
+
+export interface ChartAxes {
+  xTicks: number[];
+  yTicks: number[];
+  yDomain: [number, number];
+}
+
 export interface StrategyMetrics {
   maxProfit: number | 'unlimited';
   maxLoss: number | 'unlimited';
@@ -49,6 +60,9 @@ export interface StrategyMetrics {
 export interface CalculatorResult {
   metrics: StrategyMetrics;
   curve: PnLPoint[];
+  theoreticalCurve?: PnLPoint[];
+  chartRange?: ChartRange;
+  chartAxes?: ChartAxes;
   greeks?: Greeks;
 }
 

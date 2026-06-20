@@ -4,6 +4,8 @@ export * from './calculator-configs.js';
 export * from './math/black-scholes.js';
 export * from './math/volatility.js';
 export * from './math/curve.js';
+export * from './math/chart-range.js';
+export * from './math/constants.js';
 export * from './strategies/index.js';
 export * from './premium/catalog.js';
 export * from './premium/trial.js';

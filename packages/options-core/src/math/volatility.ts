@@ -1,3 +1,4 @@
+import { DAYS_PER_YEAR_EM } from './constants.js';
 import type { OptionType } from '../types.js';
 import { blackScholesCall, blackScholesPut } from './black-scholes.js';
 
@@ -54,7 +55,7 @@ export function expectedMove(
   ivPercent: number,
   dte: number,
 ): { up: number; down: number; moveDollars: number; movePercent: number } {
-  const timeYears = dte / 365;
+  const timeYears = dte / DAYS_PER_YEAR_EM;
   const movePercent = ivPercent * Math.sqrt(timeYears);
   const moveDollars = stockPrice * (movePercent / 100);
   return {
