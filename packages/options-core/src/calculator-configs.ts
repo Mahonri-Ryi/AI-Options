@@ -1,0 +1,463 @@
+import type { CalculatorResult } from './types.js';
+import {
+  bearCallSpread,
+  bearPutSpread,
+  bullCallSpread,
+  bullPutSpread,
+  cashSecuredPut,
+  coveredCall,
+  expectedMove,
+  impliedVolatility,
+  ironButterfly,
+  ironCondor,
+  longCall,
+  longPut,
+  optionsPricing,
+  poorMansCoveredCall,
+  shortCall,
+  shortPut,
+  straddle,
+  strangle,
+  thetaDecayCurve,
+} from './strategies/index.js';
+
+export interface CalculatorField {
+  key: string;
+  label: string;
+  defaultValue: string;
+  suffix?: string;
+}
+
+export interface CalculatorConfig {
+  id: string;
+  title: string;
+  fields: CalculatorField[];
+  compute: (values: Record<string, string>) => CalculatorResult | null;
+}
+
+function num(values: Record<string, string>, key: string, fallback = 0): number {
+  const parsed = Number(values[key]);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function baseInputs(values: Record<string, string>) {
+  return {
+    stockPrice: num(values, 'stockPrice', 100),
+    dte: num(values, 'dte', 30),
+    riskFreeRate: num(values, 'riskFreeRate', 5),
+    dividendYield: num(values, 'dividendYield', 0),
+    quantity: num(values, 'quantity', 1),
+    calculationMode: 'iv' as const,
+    iv: num(values, 'iv', 25),
+  };
+}
+export const CALCULATOR_CONFIGS: Record<string, CalculatorConfig> = {
+  'long-call': {
+    id: 'long-call',
+    title: 'Long Call',
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
+      { key: 'strike', label: 'Strike', defaultValue: '105' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
+      { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'riskFreeRate', label: 'Rate', defaultValue: '5', suffix: '%' },
+      { key: 'quantity', label: 'Contracts', defaultValue: '1' },
+    ],
+    compute: (values) =>
+      longCall({ ...baseInputs(values), strike: num(values, 'strike'), type: 'call', side: 'long' }),
+  },
+  'long-put': {
+    id: 'long-put',
+    title: 'Long Put',
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
+      { key: 'strike', label: 'Strike', defaultValue: '95' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
+      { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'riskFreeRate', label: 'Rate', defaultValue: '5', suffix: '%' },
+      { key: 'quantity', label: 'Contracts', defaultValue: '1' },
+    ],
+    compute: (values) =>
+      longPut({ ...baseInputs(values), strike: num(values, 'strike'), type: 'put', side: 'long' }),
+  },
+  'short-call': {
+    id: 'short-call',
+    title: 'Short Call',
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
+      { key: 'strike', label: 'Strike', defaultValue: '105' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
+      { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'riskFreeRate', label: 'Rate', defaultValue: '5', suffix: '%' },
+      { key: 'quantity', label: 'Contracts', defaultValue: '1' },
+    ],
+    compute: (values) =>
+      shortCall({ ...baseInputs(values), strike: num(values, 'strike'), type: 'call', side: 'short' }),
+  },
+  'short-put': {
+    id: 'short-put',
+    title: 'Short Put',
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
+      { key: 'strike', label: 'Strike', defaultValue: '95' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
+      { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'riskFreeRate', label: 'Rate', defaultValue: '5', suffix: '%' },
+      { key: 'quantity', label: 'Contracts', defaultValue: '1' },
+    ],
+    compute: (values) =>
+      shortPut({ ...baseInputs(values), strike: num(values, 'strike'), type: 'put', side: 'short' }),
+  },
+  'bull-call-spread': {
+    id: 'bull-call-spread',
+    title: 'Bull Call Spread',
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
+      { key: 'longStrike', label: 'Long Strike', defaultValue: '100' },
+      { key: 'shortStrike', label: 'Short Strike', defaultValue: '110' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
+      { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'quantity', label: 'Contracts', defaultValue: '1' },
+    ],
+    compute: (values) =>
+      bullCallSpread({
+        ...baseInputs(values),
+        longStrike: num(values, 'longStrike'),
+        shortStrike: num(values, 'shortStrike'),
+        longType: 'call',
+      }),
+  },
+  'bull-put-spread': {
+    id: 'bull-put-spread',
+    title: 'Bull Put Spread',
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
+      { key: 'longStrike', label: 'Long Strike', defaultValue: '90' },
+      { key: 'shortStrike', label: 'Short Strike', defaultValue: '100' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
+      { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'quantity', label: 'Contracts', defaultValue: '1' },
+    ],
+    compute: (values) =>
+      bullPutSpread({
+        ...baseInputs(values),
+        longStrike: num(values, 'longStrike'),
+        shortStrike: num(values, 'shortStrike'),
+        longType: 'put',
+      }),
+  },
+  'bear-put-spread': {
+    id: 'bear-put-spread',
+    title: 'Bear Put Spread',
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
+      { key: 'longStrike', label: 'Long Strike', defaultValue: '100' },
+      { key: 'shortStrike', label: 'Short Strike', defaultValue: '90' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
+      { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'quantity', label: 'Contracts', defaultValue: '1' },
+    ],
+    compute: (values) =>
+      bearPutSpread({
+        ...baseInputs(values),
+        longStrike: num(values, 'longStrike'),
+        shortStrike: num(values, 'shortStrike'),
+        longType: 'put',
+      }),
+  },
+  'bear-call-spread': {
+    id: 'bear-call-spread',
+    title: 'Bear Call Spread',
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
+      { key: 'longStrike', label: 'Long Strike', defaultValue: '110' },
+      { key: 'shortStrike', label: 'Short Strike', defaultValue: '100' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
+      { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'quantity', label: 'Contracts', defaultValue: '1' },
+    ],
+    compute: (values) =>
+      bearCallSpread({
+        ...baseInputs(values),
+        longStrike: num(values, 'longStrike'),
+        shortStrike: num(values, 'shortStrike'),
+        longType: 'call',
+      }),
+  },
+  'covered-call': {
+    id: 'covered-call',
+    title: 'Covered Call',
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
+      { key: 'shareCostBasis', label: 'Cost Basis', defaultValue: '95' },
+      { key: 'strike', label: 'Call Strike', defaultValue: '105' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
+      { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'quantity', label: 'Contracts', defaultValue: '1' },
+    ],
+    compute: (values) =>
+      coveredCall({
+        ...baseInputs(values),
+        strike: num(values, 'strike'),
+        shareCostBasis: num(values, 'shareCostBasis'),
+      }),
+  },
+  'cash-secured-put': {
+    id: 'cash-secured-put',
+    title: 'Cash-Secured Put',
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
+      { key: 'strike', label: 'Strike', defaultValue: '95' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
+      { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'quantity', label: 'Contracts', defaultValue: '1' },
+    ],
+    compute: (values) =>
+      cashSecuredPut({ ...baseInputs(values), strike: num(values, 'strike'), type: 'put', side: 'short' }),
+  },
+  pmcc: {
+    id: 'pmcc',
+    title: "Poor Man's Covered Call",
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
+      { key: 'longStrike', label: 'Long Call Strike', defaultValue: '80' },
+      { key: 'shortStrike', label: 'Short Call Strike', defaultValue: '105' },
+      { key: 'longDte', label: 'Long DTE', defaultValue: '180' },
+      { key: 'shortDte', label: 'Short DTE', defaultValue: '30' },
+      { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'quantity', label: 'Contracts', defaultValue: '1' },
+    ],
+    compute: (values) =>
+      poorMansCoveredCall({
+        ...baseInputs(values),
+        longStrike: num(values, 'longStrike'),
+        shortStrike: num(values, 'shortStrike'),
+        longDte: num(values, 'longDte'),
+        shortDte: num(values, 'shortDte'),
+      }),
+  },
+  straddle: {
+    id: 'straddle',
+    title: 'Straddle',
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
+      { key: 'strike', label: 'Strike', defaultValue: '100' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
+      { key: 'iv', label: 'IV', defaultValue: '30', suffix: '%' },
+      { key: 'positionType', label: 'Position (long/short)', defaultValue: 'long' },
+      { key: 'quantity', label: 'Contracts', defaultValue: '1' },
+    ],
+    compute: (values) =>
+      straddle({
+        ...baseInputs(values),
+        strike: num(values, 'strike'),
+        positionType: values.positionType === 'short' ? 'short' : 'long',
+      }),
+  },
+  strangle: {
+    id: 'strangle',
+    title: 'Strangle',
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
+      { key: 'putStrike', label: 'Put Strike', defaultValue: '95' },
+      { key: 'callStrike', label: 'Call Strike', defaultValue: '105' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
+      { key: 'iv', label: 'IV', defaultValue: '30', suffix: '%' },
+      { key: 'positionType', label: 'Position (long/short)', defaultValue: 'long' },
+      { key: 'quantity', label: 'Contracts', defaultValue: '1' },
+    ],
+    compute: (values) =>
+      strangle({
+        ...baseInputs(values),
+        putStrike: num(values, 'putStrike'),
+        callStrike: num(values, 'callStrike'),
+        positionType: values.positionType === 'short' ? 'short' : 'long',
+      }),
+  },
+  'iron-condor': {
+    id: 'iron-condor',
+    title: 'Iron Condor',
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '200' },
+      { key: 'longPutStrike', label: 'Long Put', defaultValue: '170' },
+      { key: 'shortPutStrike', label: 'Short Put', defaultValue: '180' },
+      { key: 'shortCallStrike', label: 'Short Call', defaultValue: '220' },
+      { key: 'longCallStrike', label: 'Long Call', defaultValue: '230' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '60' },
+      { key: 'iv', label: 'IV', defaultValue: '30', suffix: '%' },
+      { key: 'quantity', label: 'Contracts', defaultValue: '1' },
+    ],
+    compute: (values) =>
+      ironCondor({
+        ...baseInputs(values),
+        longPutStrike: num(values, 'longPutStrike'),
+        shortPutStrike: num(values, 'shortPutStrike'),
+        shortCallStrike: num(values, 'shortCallStrike'),
+        longCallStrike: num(values, 'longCallStrike'),
+        positionType: 'short',
+      }),
+  },
+  'iron-butterfly': {
+    id: 'iron-butterfly',
+    title: 'Iron Butterfly',
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '200' },
+      { key: 'longPutStrike', label: 'Long Put', defaultValue: '190' },
+      { key: 'shortPutStrike', label: 'Body Strike', defaultValue: '200' },
+      { key: 'shortCallStrike', label: 'Body Strike (Call)', defaultValue: '200' },
+      { key: 'longCallStrike', label: 'Long Call', defaultValue: '210' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '45' },
+      { key: 'iv', label: 'IV', defaultValue: '30', suffix: '%' },
+      { key: 'quantity', label: 'Contracts', defaultValue: '1' },
+    ],
+    compute: (values) =>
+      ironButterfly({
+        ...baseInputs(values),
+        longPutStrike: num(values, 'longPutStrike'),
+        shortPutStrike: num(values, 'shortPutStrike'),
+        shortCallStrike: num(values, 'shortCallStrike', num(values, 'shortPutStrike')),
+        longCallStrike: num(values, 'longCallStrike'),
+        positionType: 'short',
+      }),
+  },
+  'options-pricing': {
+    id: 'options-pricing',
+    title: 'Options Pricing',
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
+      { key: 'strike', label: 'Strike', defaultValue: '100' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '30' },
+      { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'riskFreeRate', label: 'Rate', defaultValue: '5', suffix: '%' },
+      { key: 'optionType', label: 'Type (call/put)', defaultValue: 'call' },
+    ],
+    compute: (values) => {
+      const pricing = optionsPricing({
+        stockPrice: num(values, 'stockPrice'),
+        strike: num(values, 'strike'),
+        dte: num(values, 'dte'),
+        iv: num(values, 'iv'),
+        riskFreeRate: num(values, 'riskFreeRate'),
+        dividendYield: 0,
+        type: values.optionType === 'put' ? 'put' : 'call',
+      });
+      return {
+        metrics: {
+          maxProfit: 0,
+          maxLoss: 0,
+          breakevens: [],
+          netPremium: pricing.price,
+          premium: pricing.price,
+          greeks: pricing.greeks,
+        },
+        curve: [],
+        greeks: pricing.greeks,
+      };
+    },
+  },
+  'implied-volatility': {
+    id: 'implied-volatility',
+    title: 'Implied Volatility',
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
+      { key: 'strike', label: 'Strike', defaultValue: '105' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '45' },
+      { key: 'optionPrice', label: 'Option Price', defaultValue: '2.50' },
+      { key: 'riskFreeRate', label: 'Rate', defaultValue: '4.5', suffix: '%' },
+      { key: 'optionType', label: 'Type (call/put)', defaultValue: 'call' },
+    ],
+    compute: (values) => {
+      const iv = impliedVolatility(
+        values.optionType === 'put' ? 'put' : 'call',
+        num(values, 'optionPrice'),
+        num(values, 'stockPrice'),
+        num(values, 'strike'),
+        num(values, 'dte'),
+        num(values, 'riskFreeRate'),
+      );
+      return {
+        metrics: {
+          maxProfit: 0,
+          maxLoss: 0,
+          breakevens: [],
+          netPremium: iv,
+          premium: iv,
+        },
+        curve: [],
+      };
+    },
+  },
+  'theta-decay': {
+    id: 'theta-decay',
+    title: 'Theta Decay Curve',
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
+      { key: 'strike', label: 'Strike', defaultValue: '100' },
+      { key: 'dte', label: 'Days to Exp', defaultValue: '45' },
+      { key: 'iv', label: 'IV', defaultValue: '30', suffix: '%' },
+      { key: 'riskFreeRate', label: 'Rate', defaultValue: '4.5', suffix: '%' },
+      { key: 'optionType', label: 'Type (call/put)', defaultValue: 'call' },
+    ],
+    compute: (values) => {
+      const curve = thetaDecayCurve(
+        values.optionType === 'put' ? 'put' : 'call',
+        num(values, 'stockPrice'),
+        num(values, 'strike'),
+        num(values, 'dte'),
+        num(values, 'iv'),
+        num(values, 'riskFreeRate'),
+      );
+      return {
+        metrics: {
+          maxProfit: curve[0]?.price ?? 0,
+          maxLoss: curve[curve.length - 1]?.price ?? 0,
+          breakevens: [],
+          netPremium: curve[0]?.price ?? 0,
+          premium: curve[curve.length - 1]?.price ?? 0,
+        },
+        curve: curve.map((point) => ({ stockPrice: point.dte, pnl: point.price })),
+      };
+    },
+  },
+  'expected-move': {
+    id: 'expected-move',
+    title: 'Expected Move',
+    fields: [
+      { key: 'stockPrice', label: 'Stock Price', defaultValue: '100' },
+      { key: 'iv', label: 'IV', defaultValue: '30', suffix: '%' },
+      { key: 'dte', label: 'Days', defaultValue: '30' },
+    ],
+    compute: (values) => {
+      const move = expectedMove(num(values, 'stockPrice'), num(values, 'iv'), num(values, 'dte'));
+      return {
+        metrics: {
+          maxProfit: move.up,
+          maxLoss: move.down,
+          breakevens: [move.up, move.down],
+          netPremium: move.moveDollars,
+          premium: move.movePercent,
+        },
+        curve: [
+          { stockPrice: move.down, pnl: 0 },
+          { stockPrice: num(values, 'stockPrice'), pnl: 0 },
+          { stockPrice: move.up, pnl: 0 },
+        ],
+      };
+    },
+  },
+};
+
+export function getDefaultValues(configId: string): Record<string, string> {
+  const config = CALCULATOR_CONFIGS[configId];
+  if (!config) return {};
+  return Object.fromEntries(config.fields.map((field) => [field.key, field.defaultValue]));
+}
+
+export function computeCalculator(
+  configId: string,
+  values: Record<string, string>,
+): CalculatorResult | null {
+  const config = CALCULATOR_CONFIGS[configId];
+  if (!config) return null;
+  return config.compute(values);
+}

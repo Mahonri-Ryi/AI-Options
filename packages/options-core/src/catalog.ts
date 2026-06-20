@@ -126,3 +126,31 @@ export function getStrategiesByCategory(
 ): StrategyDefinition[] {
   return STRATEGIES.filter((strategy) => strategy.category === category);
 }
+
+export const CATEGORY_LABELS: Record<StrategyDefinition['category'], string> = {
+  'single-leg': 'Single-Leg Strategies',
+  vertical: 'Vertical Spreads',
+  income: 'Income Strategies',
+  volatility: 'Volatility Strategies',
+  pricing: 'Pricing & Greeks',
+};
+
+const CATEGORY_ORDER: StrategyDefinition['category'][] = [
+  'single-leg',
+  'vertical',
+  'income',
+  'volatility',
+  'pricing',
+];
+
+export function getGroupedStrategies(): Array<{
+  category: StrategyDefinition['category'];
+  label: string;
+  strategies: StrategyDefinition[];
+}> {
+  return CATEGORY_ORDER.map((category) => ({
+    category,
+    label: CATEGORY_LABELS[category],
+    strategies: STRATEGIES.filter((s) => s.category === category),
+  }));
+}
