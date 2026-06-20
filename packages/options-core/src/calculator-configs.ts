@@ -22,6 +22,7 @@ import {
   thetaDecayAnalysis,
 } from './strategies/index.js';
 import { getDefaultFormValues } from './calculator-ui.js';
+import { buildCalculatorVisualization } from './calculator-visualization.js';
 
 export interface CalculatorField {
   key: string;
@@ -252,24 +253,33 @@ export const CALCULATOR_CONFIGS: Record<string, CalculatorConfig> = {
     id: 'pmcc',
     title: "Poor Man's Covered Call",
     fields: [
+      { key: 'longStrike', label: 'Long Strike', defaultValue: '180' },
+      { key: 'shortStrike', label: 'Short Strike', defaultValue: '220' },
+      { key: 'longDte', label: 'LC DTE', defaultValue: '365' },
+      { key: 'shortDte', label: 'SC DTE', defaultValue: '60' },
       { key: 'stockPrice', label: 'Stock Price', defaultValue: '185' },
-      { key: 'longStrike', label: 'Long Call Strike', defaultValue: '180' },
-      { key: 'shortStrike', label: 'Short Call Strike', defaultValue: '220' },
-      { key: 'longDte', label: 'Long DTE', defaultValue: '365' },
-      { key: 'shortDte', label: 'Short DTE', defaultValue: '60' },
       { key: 'iv', label: 'IV', defaultValue: '25', suffix: '%' },
+      { key: 'longIv', label: 'Long IV', defaultValue: '25', suffix: '%' },
+      { key: 'shortIv', label: 'Short IV', defaultValue: '25', suffix: '%' },
       { key: 'riskFreeRate', label: 'Rate', defaultValue: '4', suffix: '%' },
       { key: 'dividendYield', label: 'Div Yield', defaultValue: '0', suffix: '%' },
       { key: 'quantity', label: 'Contracts', defaultValue: '1' },
     ],
-    compute: (values) =>
-      poorMansCoveredCall({
+    compute: (values) => {
+      const mode = values.calculationMode === 'iv' ? 'iv' : 'price';
+      return poorMansCoveredCall({
         ...baseInputs(values),
+        calculationMode: mode,
         longStrike: num(values, 'longStrike'),
         shortStrike: num(values, 'shortStrike'),
         longDte: num(values, 'longDte'),
         shortDte: num(values, 'shortDte'),
-      }),
+        longIv: num(values, 'longIv', num(values, 'iv', 25)),
+        shortIv: num(values, 'shortIv', num(values, 'iv', 25)),
+        longPremium: values.longOptionPrice ? num(values, 'longOptionPrice') : undefined,
+        shortPremium: values.shortOptionPrice ? num(values, 'shortOptionPrice') : undefined,
+      });
+    },
   },
   straddle: {
     id: 'straddle',
@@ -518,5 +528,10 @@ export function computeCalculator(
 ): CalculatorResult | null {
   const config = CALCULATOR_CONFIGS[configId];
   if (!config) return null;
-  return config.compute(values);
+  const result = config.compute(values);
+  if (!result) return null;
+  return {
+    ...result,
+    visualization: buildCalculatorVisualization(configId, result, values),
+  };
 }

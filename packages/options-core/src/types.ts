@@ -57,13 +57,52 @@ export interface StrategyMetrics {
   greeks?: Greeks;
 }
 
+export type ChartSeriesStyle = 'theoretical' | 'expiration' | 'stock';
+
+export interface ChartSeries {
+  id: string;
+  label: string;
+  data: PnLPoint[];
+  style: ChartSeriesStyle;
+}
+
+export type ChartMarkerType = 'current' | 'strike' | 'breakeven' | 'longStrike' | 'shortStrike';
+
+export interface ChartMarker {
+  type: ChartMarkerType;
+  value: number;
+  label?: string;
+}
+
+export interface MetricItem {
+  label: string;
+  value: string;
+  variant?: 'profit' | 'loss' | 'neutral';
+  secondary?: string;
+}
+
+export interface MetricSection {
+  title?: string;
+  layout: 'grid' | 'rows';
+  items: MetricItem[];
+}
+
+export interface CalculatorVisualization {
+  chartTitle: string;
+  chartSeries: ChartSeries[];
+  chartMarkers: ChartMarker[];
+  metricSections: MetricSection[];
+}
+
 export interface CalculatorResult {
   metrics: StrategyMetrics;
   curve: PnLPoint[];
   theoreticalCurve?: PnLPoint[];
+  stockComparisonCurve?: PnLPoint[];
   chartRange?: ChartRange;
   chartAxes?: ChartAxes;
   greeks?: Greeks;
+  visualization?: CalculatorVisualization;
   expectedMoveDetail?: ExpectedMoveDetail;
   expectedMoveCone?: ExpectedMoveConePoint[];
   thetaDecayDetail?: ThetaDecayDetail;

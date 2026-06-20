@@ -2,6 +2,7 @@ export type CalculatorFormMode =
   | 'standard'
   | 'iv-price'
   | 'spread-price'
+  | 'pmcc-price'
   | 'expected-move'
   | 'theta-decay';
 
@@ -16,6 +17,7 @@ export const CALCULATOR_FORM_MODES: Record<string, CalculatorFormMode> = {
   'bull-put-spread': 'spread-price',
   'bear-put-spread': 'spread-price',
   'bear-call-spread': 'spread-price',
+  pmcc: 'pmcc-price',
   'expected-move': 'expected-move',
   'theta-decay': 'theta-decay',
 };
@@ -36,6 +38,8 @@ export const SPREAD_PRICE_CALCULATORS = new Set([
   'bear-call-spread',
 ]);
 
+export const PMCC_PRICE_CALCULATORS = new Set(['pmcc']);
+
 export function getCalculatorFormMode(id: string): CalculatorFormMode {
   return CALCULATOR_FORM_MODES[id] ?? 'standard';
 }
@@ -52,6 +56,14 @@ export function getDefaultFormValues(id: string): Record<string, string> {
     extras.calculationMode = 'iv';
     extras.longOptionPrice = '3.50';
     extras.shortOptionPrice = '1.00';
+  }
+
+  if (PMCC_PRICE_CALCULATORS.has(id)) {
+    extras.calculationMode = 'price';
+    extras.longOptionPrice = '40';
+    extras.shortOptionPrice = '4';
+    extras.longIv = '25';
+    extras.shortIv = '25';
   }
 
   if (id === 'covered-call') {

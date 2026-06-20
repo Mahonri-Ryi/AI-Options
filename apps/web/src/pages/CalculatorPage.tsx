@@ -26,13 +26,17 @@ function shouldShowField(
 
   if (fieldKey === 'iv') {
     if (formMode === 'iv-price' || formMode === 'spread-price') return calcMode === 'iv';
+    if (formMode === 'pmcc-price') return calcMode === 'iv';
     return fieldKey === 'iv';
+  }
+  if (fieldKey === 'longIv' || fieldKey === 'shortIv') {
+    return formMode === 'pmcc-price' && calcMode === 'iv';
   }
   if (fieldKey === 'optionPrice') {
     return formMode === 'iv-price' && calcMode === 'price';
   }
   if (fieldKey === 'longOptionPrice' || fieldKey === 'shortOptionPrice') {
-    return formMode === 'spread-price' && calcMode === 'price';
+    return (formMode === 'spread-price' || formMode === 'pmcc-price') && calcMode === 'price';
   }
   if (fieldKey === 'optionType' && calculatorId === 'theta-decay') {
     return false;
@@ -90,14 +94,21 @@ export function CalculatorPage() {
             <h2 className="panel-title">Option Parameters</h2>
           </div>
 
-          {formMode === 'iv-price' || formMode === 'spread-price' ? (
+          {formMode === 'iv-price' || formMode === 'spread-price' || formMode === 'pmcc-price' ? (
             <ModeToggle
               label="Calculate with:"
-              value={values.calculationMode ?? 'iv'}
-              options={[
-                { value: 'iv', label: 'IV' },
-                { value: 'price', label: 'Price' },
-              ]}
+              value={values.calculationMode ?? (formMode === 'pmcc-price' ? 'price' : 'iv')}
+              options={
+                formMode === 'pmcc-price'
+                  ? [
+                      { value: 'price', label: 'Prices' },
+                      { value: 'iv', label: 'IV' },
+                    ]
+                  : [
+                      { value: 'iv', label: 'IV' },
+                      { value: 'price', label: 'Price' },
+                    ]
+              }
               onChange={(mode) => updateValue('calculationMode', mode)}
             />
           ) : null}
@@ -175,6 +186,7 @@ export function CalculatorPage() {
         <section className="chart-panel card chart-panel-full">
           <h2 className="panel-title">P/L Chart</h2>
           <PnLChart
+            visualization={result.visualization}
             data={result.curve}
             theoreticalData={result.theoreticalCurve}
             currentPrice={stockPrice}

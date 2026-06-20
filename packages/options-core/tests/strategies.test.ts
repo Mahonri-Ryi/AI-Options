@@ -178,7 +178,9 @@ describe('Income strategies', () => {
       shortPremium: 3,
     });
     expect(result.curve.length).toBeGreaterThan(50);
-    expectCloseTo(result.metrics.maxLoss as number, 2500);
+    expectCloseTo(result.metrics.maxLoss as number, 2200);
+    expect(result.theoreticalCurve?.length).toBe(result.curve.length);
+    expect(result.greeks).toBeDefined();
   });
 });
 

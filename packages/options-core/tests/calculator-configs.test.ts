@@ -76,6 +76,23 @@ describe('Calculator configs', () => {
     });
     expect(result!.metrics.premium).toBeCloseTo(3.25, 2);
   });
+
+  it('pmcc visualization includes short-expiration and T+0 chart series', () => {
+    const result = computeCalculator('pmcc', getDefaultValues('pmcc'));
+    expect(result!.visualization?.chartSeries.length).toBe(2);
+    expect(result!.visualization?.chartSeries[0].label).toBe('Today (T+0)');
+    expect(result!.visualization?.chartSeries[1].label).toContain('Short Exp');
+    expect(result!.visualization?.metricSections.length).toBeGreaterThan(2);
+  });
+
+  it('covered-call visualization includes stock comparison line', () => {
+    const result = computeCalculator('covered-call', getDefaultValues('covered-call'));
+    expect(result!.stockComparisonCurve?.length).toBeGreaterThan(1);
+    expect(result!.visualization?.chartSeries.some((s) => s.style === 'stock')).toBe(true);
+    expect(result!.visualization?.metricSections.some((s) => s.title === 'Profit Scenarios')).toBe(
+      true,
+    );
+  });
 });
 
 describe('optionsPricing standalone', () => {
