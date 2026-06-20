@@ -1,25 +1,43 @@
+.iv-results {
+  padding: 0;
+  overflow: hidden;
+  background: rgba(10, 10, 15, 0.7);
+  border-color: rgba(85, 207, 255, 0.15);
+}
+
+.iv-results h2 {
+  margin: 0;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 .iv-result-card {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 2rem 1rem;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 16px;
 }
 
 .iv-result-label {
-  font-size: 0.875rem;
-  color: var(--text-muted);
+  font-size: 15px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .iv-result-value {
-  font-size: 2.5rem;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--primary);
+  font-variant-numeric: tabular-nums;
 }
 
 .iv-warning {
-  margin: 0.5rem 0 0;
-  font-size: 0.8125rem;
+  margin: 0;
+  padding: 0 16px 16px;
+  font-size: 12px;
   color: #f59e0b;
-  text-align: center;
 }
