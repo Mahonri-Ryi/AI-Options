@@ -1,0 +1,36 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, cursor/options-calculator-app-86a8]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build core library
+        run: npm run build -w @ai-options/core
+
+      - name: Run calculation accuracy tests
+        run: npm test
+
+      - name: Check for forbidden external references
+        run: npm run check:refs
+
+      - name: Typecheck all packages
+        run: npm run typecheck

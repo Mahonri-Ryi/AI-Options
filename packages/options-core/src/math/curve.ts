@@ -1,4 +1,11 @@
-import type { Greeks, OptionLeg, PnLPoint, StockLeg } from '../types.js';
+import type { ChartAxes, ChartRange, Greeks, OptionLeg, PnLPoint, StockLeg } from '../types.js';
+import {
+  buildStockPricePoints,
+  chartYDomain,
+  nicePnlTicks,
+  nicePriceTicks,
+  type PriceRange,
+} from './chart-range.js';
 import { calculateGreeks, optionPrice, pnlAtExpiration } from './black-scholes.js';
 
 const CONTRACT_MULTIPLIER = 100;
@@ -22,8 +29,8 @@ export function generatePriceRange(
   const allPrices = [stockPrice, ...strikes];
   const minStrike = Math.min(...allPrices);
   const maxStrike = Math.max(...allPrices);
-  const span = Math.max(maxStrike - minStrike, stockPrice * 0.1);
-  const padding = span * paddingPercent;
+  const span = Math.max(maxStrike - minStrike, stockPrice * 0.2);
+  const padding = Math.max(span * paddingPercent, stockPrice * 0.35);
   return {
     min: Math.max(0.01, minStrike - padding),
     max: maxStrike + padding,
@@ -48,6 +55,59 @@ export function buildPnLCurve(
   }
 
   return curve;
+}
+
+export function buildSteppedCurves(
+  range: PriceRange,
+  step: number,
+  evaluateExpiration: (stockPrice: number) => number,
+  evaluateTheoretical?: (stockPrice: number) => number,
+): { expirationCurve: PnLPoint[]; theoreticalCurve: PnLPoint[] } {
+  const prices = buildStockPricePoints(range, step);
+  const expirationCurve = prices.map((stockPrice) => ({
+    stockPrice,
+    pnl: Number(evaluateExpiration(stockPrice).toFixed(2)),
+  }));
+  const theoreticalCurve = prices.map((stockPrice) => ({
+    stockPrice,
+    pnl: Number((evaluateTheoretical ?? evaluateExpiration)(stockPrice).toFixed(2)),
+  }));
+  return { expirationCurve, theoreticalCurve };
+}
+
+export function buildChartAxes(
+  range: PriceRange,
+  expirationCurve: PnLPoint[],
+  theoreticalCurve?: PnLPoint[],
+): ChartAxes {
+  const curves = theoreticalCurve ? [expirationCurve, theoreticalCurve] : [expirationCurve];
+  const yDomain = chartYDomain(curves);
+  return {
+    xTicks: nicePriceTicks(range.min, range.max),
+    yTicks: nicePnlTicks(yDomain[0], yDomain[1]),
+    yDomain,
+  };
+}
+
+export function analyticalBreakeven(
+  type: 'call' | 'put',
+  side: 'long' | 'short',
+  strike: number,
+  premium: number,
+): number {
+  if (side === 'long') {
+    return type === 'call' ? strike + premium : strike - premium;
+  }
+  return type === 'call' ? strike + premium : strike - premium;
+}
+
+export function spreadBreakeven(
+  longStrike: number,
+  shortStrike: number,
+  netDebit: number,
+  type: 'call' | 'put',
+): number {
+  return type === 'call' ? longStrike + netDebit : longStrike - netDebit;
 }
 
 export function evaluateOptionLeg(

@@ -1,0 +1,55 @@
+.expected-move-chart,
+.theta-decay-chart {
+  width: 100%;
+}
+
+.em-svg,
+.theta-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.em-cone-fill {
+  fill: rgba(85, 207, 255, 0.15);
+}
+
+.em-boundary-line,
+.theta-option-line {
+  stroke: #55cfff;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.em-center-line,
+.theta-intrinsic-line {
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+
+.em-legend,
+.theta-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 0.75rem;
+}
+
+.em-swatch {
+  background: rgba(85, 207, 255, 0.35);
+}
+
+.em-dash,
+.theta-dash {
+  display: inline-block;
+  width: 20px;
+  height: 0;
+  border-top: 2px dashed rgba(255, 255, 255, 0.5);
+}
+
+.theta-extrinsic-fill {
+  fill: rgba(85, 207, 255, 0.12);
+}

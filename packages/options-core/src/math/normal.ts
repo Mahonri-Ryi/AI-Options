@@ -1,3 +1,5 @@
+import { DAYS_PER_YEAR } from './constants.js';
+
 /** Standard normal cumulative distribution function */
 export function normalCdf(x: number): number {
   const t = 1 / (1 + 0.2316419 * Math.abs(x));
@@ -16,7 +18,7 @@ export function normalPdf(x: number): number {
 }
 
 export function yearsFromDte(dte: number): number {
-  return Math.max(dte, 0) / 365;
+  return Math.max(dte, 0) / DAYS_PER_YEAR;
 }
 
 export interface D1D2 {

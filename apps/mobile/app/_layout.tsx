@@ -30,6 +30,7 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen name="calculator/[id]" options={{ title: 'Calculator' }} />
+        <Stack.Screen name="tools/[id]" options={{ title: 'Premium Tool' }} />
       </Stack>
     </>
   );

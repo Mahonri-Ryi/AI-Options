@@ -1,16 +1,19 @@
 import { Link } from 'expo-router';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { PREMIUM_FEATURES, STRATEGIES } from '@ai-options/core';
 import { getGroupedStrategies, ROUTE_BY_STRATEGY } from '../constants/strategies';
 import { colors, radius, spacing } from '../constants/theme';
+import { TrialProvider, useTrial } from '../hooks/useTrial';
 
-export default function HomeScreen() {
+function HomeContent() {
   const groups = getGroupedStrategies();
+  const { isPremium, isTrial, daysRemaining, startTrial } = useTrial();
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.hero}>
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>20 Calculators</Text>
+          <Text style={styles.badgeText}>{STRATEGIES.length} Calculators</Text>
         </View>
         <Text style={styles.title}>Model your options trades</Text>
         <Text style={styles.titleAccent}>before you trade</Text>
@@ -18,6 +21,40 @@ export default function HomeScreen() {
           Visualize profit and loss for every major options strategy. All calculations run locally
           for instant results.
         </Text>
+      </View>
+
+      {!isPremium ? (
+        <TouchableOpacity style={styles.trialCta} activeOpacity={0.8} onPress={startTrial}>
+          <Text style={styles.trialTitle}>Try premium tools free for 7 days</Text>
+          <Text style={styles.trialDesc}>
+            Unlock Option Modeler, IV Screener, Income Analyzers, Roll Analyzer, and Trade Logger.
+          </Text>
+          <Text style={styles.trialBtn}>Start Free Trial →</Text>
+        </TouchableOpacity>
+      ) : isTrial ? (
+        <View style={styles.trialBanner}>
+          <Text style={styles.trialBannerText}>
+            Premium trial — {daysRemaining} day{daysRemaining !== 1 ? 's' : ''} remaining
+          </Text>
+        </View>
+      ) : null}
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Premium Tools</Text>
+        <View style={styles.grid}>
+          {PREMIUM_FEATURES.map((feature) => (
+            <Link key={feature.id} href={`/tools/${feature.id}` as `/tools/${string}`} asChild>
+              <TouchableOpacity style={[styles.card, styles.premiumCard]} activeOpacity={0.75}>
+                <View style={styles.premiumTitleRow}>
+                  <Text style={styles.cardTitle}>{feature.name}</Text>
+                  <Text style={styles.premiumBadge}>Premium</Text>
+                </View>
+                <Text style={styles.cardDescription}>{feature.description}</Text>
+                <Text style={styles.cardArrow}>→</Text>
+              </TouchableOpacity>
+            </Link>
+          ))}
+        </View>
       </View>
 
       {groups.map((group) => (
@@ -41,6 +78,14 @@ export default function HomeScreen() {
         </View>
       ))}
     </ScrollView>
+  );
+}
+
+export default function HomeScreen() {
+  return (
+    <TrialProvider>
+      <HomeContent />
+    </TrialProvider>
   );
 }
 
@@ -93,6 +138,47 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 340,
   },
+  trialCta: {
+    backgroundColor: colors.surface,
+    borderColor: colors.primary,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    alignItems: 'center',
+  },
+  trialTitle: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  trialDesc: {
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  trialBtn: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  trialBanner: {
+    backgroundColor: 'rgba(85, 207, 255, 0.08)',
+    borderColor: colors.primary,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.lg,
+    alignItems: 'center',
+  },
+  trialBannerText: {
+    color: colors.textMuted,
+    fontSize: 13,
+  },
   section: {
     marginBottom: spacing.lg,
   },
@@ -118,11 +204,31 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     paddingRight: spacing.xl,
   },
+  premiumCard: {
+    borderColor: 'rgba(85, 207, 255, 0.25)',
+  },
+  premiumTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginBottom: 4,
+  },
+  premiumBadge: {
+    color: colors.primary,
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    backgroundColor: 'rgba(85, 207, 255, 0.12)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
   cardTitle: {
     color: colors.text,
     fontSize: 17,
     fontWeight: '600',
-    marginBottom: 4,
   },
   cardDescription: {
     color: colors.textMuted,

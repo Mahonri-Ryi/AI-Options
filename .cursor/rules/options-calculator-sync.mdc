@@ -1,0 +1,55 @@
+---
+description: "Sync new options calculators from the reference site and keep the app catalog complete"
+globs: packages/options-core/**,apps/mobile/**,apps/web/**
+alwaysApply: false
+---
+
+# Options calculator catalog sync
+
+When working on calculators, strategies, or pricing tools, keep our catalog complete and accurate.
+
+## Check for new calculators
+
+Periodically compare our catalog against the reference site's calculator index:
+
+- Reference URL (internal use only — never add this URL to app code, UI, or user-facing docs): https://projectoption.com/calculators
+
+Workflow:
+
+1. Fetch https://projectoption.com/calculators and list every calculator linked from that page.
+2. Compare against `STRATEGIES` in `packages/options-core/src/catalog.ts`.
+3. If the reference site has calculators we are missing, implement them end-to-end before considering the task done.
+
+## Files to update when adding a calculator
+
+| File | What to add |
+|------|-------------|
+| `packages/options-core/src/catalog.ts` | Strategy entry in `STRATEGIES` |
+| `packages/options-core/src/strategies/index.ts` | Strategy compute function |
+| `packages/options-core/src/calculator-configs.ts` | Config entry in `CALCULATOR_CONFIGS` |
+| `packages/options-core/tests/strategies.test.ts` | Analytical P/L or integrity test |
+| `packages/options-core/tests/calculator-configs.test.ts` | Covered automatically if config exists |
+| `apps/mobile/constants/strategies.ts` | Route in `ROUTE_BY_STRATEGY` (if new id) |
+| `apps/web` | Uses `@ai-options/core` catalog — no separate list needed |
+
+## Implementation requirements for each new calculator
+
+- Use Black-Scholes pricing from `packages/options-core/src/math/`
+- Support IV and price input modes where applicable
+- Return `CalculatorResult` with metrics, P/L curve, and Greeks when relevant
+- Add tests that verify max profit, max loss, breakevens, or manual expiration P/L
+- Match existing naming, categories, and UI patterns in web and mobile apps
+
+## Categories (use existing ones)
+
+- `single-leg`, `vertical`, `income`, `volatility`, `pricing`
+
+## Before finishing any calculator work
+
+```bash
+npm test
+npm run typecheck
+npm run check:refs
+```
+
+Confirm `STRATEGIES.length === Object.keys(CALCULATOR_CONFIGS).length`.
