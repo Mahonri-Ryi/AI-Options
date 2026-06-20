@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { STRATEGIES } from '@ai-options/core';
 import './Layout.css';
 
 interface LayoutProps {
@@ -23,7 +24,7 @@ export function Layout({ children }: LayoutProps) {
               ← All Calculators
             </Link>
           ) : (
-            <span className="nav-badge">20 Calculators</span>
+            <span className="nav-badge">{STRATEGIES.length} Calculators</span>
           )}
         </div>
       </header>
