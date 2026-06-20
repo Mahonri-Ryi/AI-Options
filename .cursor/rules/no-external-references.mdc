@@ -1,0 +1,39 @@
+---
+description: "Never attribute or reference external calculator sources in the app"
+alwaysApply: true
+---
+
+# No external source references
+
+This project must never mention, link to, or attribute external options calculator websites in any user-facing or shipped code.
+
+## Forbidden everywhere except `.cursor/rules/`
+
+Never include references to external calculator sites (including projectoption.com, URLs, brand names, or phrases like "recreated from", "mirrors", "based on", or "reverse-engineered from") in:
+
+- Application UI copy (`apps/mobile`, `apps/web`)
+- User-facing documentation (`README.md`, `docs/` except internal agent rules)
+- Code comments in `packages/`, `apps/`
+- Commit messages intended for public history (prefer neutral wording)
+- PR descriptions and release notes
+- API responses, error messages, or tooltips
+- Test descriptions visible in CI output (use neutral names like "reference site" only in `.cursor/rules/`)
+
+## Allowed
+
+- `.cursor/rules/` files may reference the external site **only** as an internal sync source for developers and agents
+- Neutral technical terms: "Black-Scholes", "options calculator", "IV screener"
+
+## When adding features inspired by external tools
+
+- Describe them generically: "Long Call calculator", "Iron Condor strategy"
+- Do not cite where the feature was observed
+- Run the reference check before committing:
+
+```bash
+npm run check:refs
+```
+
+## If you find a reference during review
+
+Remove it immediately and replace with neutral project-specific language.

@@ -37,3 +37,5 @@ npm run test:coverage -w @ai-options/core
 ## CI
 
 Tests run automatically on every push via GitHub Actions (`.github/workflows/test.yml`).
+
+A reference check (`npm run check:refs`) fails the build if forbidden external source names appear outside `.cursor/rules/`.

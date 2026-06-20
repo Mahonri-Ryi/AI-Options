@@ -29,5 +29,8 @@ jobs:
       - name: Run calculation accuracy tests
         run: npm test
 
+      - name: Check for forbidden external references
+        run: npm run check:refs
+
       - name: Typecheck all packages
         run: npm run typecheck
