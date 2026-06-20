@@ -82,6 +82,7 @@ export interface MetricItem {
   variant?: 'profit' | 'loss' | 'neutral' | 'positive' | 'negative';
   secondary?: string;
   secondaryVariant?: 'profit' | 'loss' | 'neutral' | 'positive' | 'negative';
+  secondaryStyle?: 'percent-change' | 'default';
   badge?: 'ITM' | 'OTM' | 'ATM';
   note?: string;
 }

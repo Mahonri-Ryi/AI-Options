@@ -4,6 +4,7 @@ export * from './calculator-configs.js';
 export * from './calculator-form-config.js';
 export * from './calculator-ui.js';
 export * from './calculator-visualization.js';
+export * from './metrics-formatters.js';
 export * from './math/black-scholes.js';
 export * from './math/volatility.js';
 export * from './math/curve.js';

@@ -3,11 +3,26 @@ import type {
   CalculatorVisualization,
   ChartMarker,
   ChartSeries,
+  Greeks,
   MetricItem,
   MetricSection,
 } from './types.js';
 import { CALCULATOR_CONFIGS } from './calculator-configs.js';
 import { impliedVolatility } from './math/volatility.js';
+import {
+  fmtCompactMoney,
+  fmtDeltaWithPerContract,
+  fmtPercentChange,
+  fmtPremium,
+  fmtSignedCompactMoney,
+  fmtSignedDelta,
+  fmtSignedGamma,
+  fmtSignedPct,
+  fmtSignedThetaPerDay,
+  fmtSignedVega,
+  fmtThetaPerDay,
+  toMetricVariant,
+} from './metrics-formatters.js';
 
 function num(values: Record<string, string>, key: string, fallback = 0): number {
   const parsed = Number(values[key]);
@@ -16,16 +31,54 @@ function num(values: Record<string, string>, key: string, fallback = 0): number 
 
 function fmtMoney(value: number | 'unlimited'): string {
   if (value === 'unlimited') return 'Unlimited';
-  const prefix = value >= 0 ? '$' : '-$';
-  return `${prefix}${Math.abs(value).toFixed(2)}`;
+  return fmtPremium(value);
 }
 
-function fmtPct(value: number): string {
-  return `${value.toFixed(1)}%`;
+function breakevenItem(
+  breakeven: number | undefined,
+  stockPrice: number,
+  label = 'Breakeven',
+): MetricItem {
+  if (breakeven === undefined) {
+    return { label, value: 'N/A' };
+  }
+  const pct = fmtPercentChange(breakeven, stockPrice);
+  return {
+    label,
+    value: fmtPremium(breakeven),
+    secondary: pct.text,
+    secondaryVariant: toMetricVariant(pct.variant),
+    secondaryStyle: 'percent-change',
+  };
 }
 
-function fmtPremium(value: number): string {
-  return `$${value.toFixed(2)}`;
+function greekMetricItems(greeks: Greeks): MetricItem[] {
+  const scale = 100;
+  const delta = fmtSignedDelta(greeks.delta * scale);
+  const gamma = fmtSignedGamma(greeks.gamma * scale);
+  const theta = fmtSignedThetaPerDay(greeks.theta * scale);
+  const vega = fmtSignedVega(greeks.vega * scale);
+  return [
+    { label: 'Delta (Δ)', value: delta.text, variant: toMetricVariant(delta.variant) },
+    { label: 'Gamma (Γ)', value: gamma.text, variant: toMetricVariant(gamma.variant) },
+    { label: 'Theta (Θ)', value: theta.text, variant: toMetricVariant(theta.variant) },
+    { label: 'Vega (ν)', value: vega.text, variant: toMetricVariant(vega.variant) },
+  ];
+}
+
+function signedMoneyValue(value: number): Pick<MetricItem, 'value' | 'variant'> {
+  const formatted = fmtSignedCompactMoney(value);
+  return {
+    value: formatted.text,
+    variant: toMetricVariant(formatted.variant),
+  };
+}
+
+function lossValueItem(maxLoss: number | 'unlimited'): Pick<MetricItem, 'value' | 'variant'> {
+  if (maxLoss === 'unlimited') {
+    return { value: 'Unlimited', variant: 'loss' };
+  }
+  return signedMoneyValue(-maxLoss);
 }
 
 function gridSection(title: string | undefined, items: MetricItem[]): MetricSection {
@@ -83,13 +136,6 @@ function moneyness(
   return stockPrice < strike ? 'ITM' : 'OTM';
 }
 
-function pctChange(from: number, to: number): string {
-  if (from === 0) return '0.0%';
-  const pct = ((to - from) / from) * 100;
-  const sign = pct >= 0 ? '+' : '';
-  return `${sign}${pct.toFixed(1)}%`;
-}
-
 function buildChartSubtitle(
   calculatorId: string,
   values: Record<string, string>,
@@ -111,8 +157,12 @@ function buildChartSubtitle(
       return `${strike} Call @ ${fmtPremium(premium)} (${dte} DTE)`;
     case 'cash-secured-put':
       return `${strike} Put @ ${fmtPremium(premium)} (${dte} DTE)`;
-    case 'pmcc':
-      return `${num(values, 'longStrike')} / ${num(values, 'shortStrike')} (${num(values, 'shortDte')} DTE short)`;
+    case 'pmcc': {
+      const netDebit = Math.abs(result.metrics.netPremium);
+      const longDte = num(values, 'longDte');
+      const shortDte = num(values, 'shortDte');
+      return `${num(values, 'longStrike')}/${num(values, 'shortStrike')} @ ${fmtPremium(netDebit)} (${longDte}/${shortDte} DTE)`;
+    }
     default:
       return '';
   }
@@ -214,8 +264,6 @@ function longLegMetrics(
     type === 'call' ? Math.max(0, stockPrice - strike) : Math.max(0, strike - stockPrice);
   const extrinsic = Math.max(0, premium - intrinsic);
   const totalCost = premium * 100 * num(values, 'quantity', 1);
-  const maxLossPct = totalCost > 0 ? (totalCost / totalCost) * 100 : 100;
-
   const quantity = num(values, 'quantity', 1);
   const badge = moneyness(stockPrice, strike, type);
   const breakeven = result.metrics.breakevens[0] ?? strike + premium;
@@ -229,45 +277,48 @@ function longLegMetrics(
       },
       {
         label: 'Total Cost',
-        value: fmtMoney(totalCost),
+        value: fmtCompactMoney(totalCost),
         secondary: 'debit',
+        variant: 'loss',
       },
     ]),
     gridSection(undefined, [
       {
         label: 'Intrinsic Value',
         value: fmtPremium(intrinsic),
-        secondary: fmtMoney(intrinsic * 100 * quantity),
+        secondary: `(${fmtCompactMoney(intrinsic * 100 * quantity)})`,
       },
       {
         label: 'Extrinsic Value',
         value: fmtPremium(extrinsic),
-        secondary: fmtMoney(extrinsic * 100 * quantity),
+        secondary: `(${fmtCompactMoney(extrinsic * 100 * quantity)})`,
       },
-      {
-        label: 'Breakeven',
-        value: `$${breakeven.toFixed(2)}`,
-        secondary: pctChange(stockPrice, breakeven),
-      },
+      breakevenItem(breakeven, stockPrice),
       {
         label: 'Max Loss',
-        value: fmtMoney(result.metrics.maxLoss as number),
-        secondary: '(100%)',
+        value:
+          result.metrics.maxLoss === 'unlimited'
+            ? 'Unlimited'
+            : fmtCompactMoney(result.metrics.maxLoss),
         variant: 'loss',
+        secondary: '(100%)',
       },
     ]),
   ];
 
   if (result.greeks) {
+    const delta = fmtDeltaWithPerContract(result.greeks.delta / quantity, quantity);
     const greeksItems: MetricItem[] = [
       {
         label: 'Delta (Δ)',
-        value: result.greeks.delta.toFixed(3),
-        secondary: `(${(result.greeks.delta / quantity).toFixed(3)}/contract)`,
+        value: delta.value,
+        secondary: delta.secondary,
+        variant: toMetricVariant(delta.variant),
       },
       {
         label: 'Theta (Θ)',
-        value: `${result.greeks.theta.toFixed(3)}/day`,
+        value: fmtThetaPerDay(result.greeks.theta * 100),
+        variant: result.greeks.theta < 0 ? 'negative' : 'positive',
       },
       {
         label: 'Implied Vol',
@@ -285,41 +336,34 @@ function shortLegMetrics(
   values: Record<string, string>,
   quantity: number,
 ): MetricSection[] {
+  const stockPrice = num(values, 'stockPrice');
+  const breakeven = result.metrics.breakevens[0];
   const sections: MetricSection[] = [
     gridSection(undefined, [
-      { label: 'Credit Received', value: fmtMoney(result.metrics.premium * 100 * quantity) },
+      {
+        label: 'Credit Received',
+        value: fmtPremium(result.metrics.premium),
+        variant: 'profit',
+      },
       {
         label: 'Implied Volatility',
         value: `${num(values, 'iv', 25).toFixed(1)}%`,
       },
       {
         label: 'Max Profit',
-        value: fmtMoney(result.metrics.maxProfit),
+        value: fmtCompactMoney(result.metrics.maxProfit as number),
         variant: 'profit',
       },
       {
         label: 'Max Loss',
-        value: fmtMoney(result.metrics.maxLoss),
-        variant: 'loss',
+        ...lossValueItem(result.metrics.maxLoss),
       },
-      {
-        label: 'Breakeven',
-        value: result.metrics.breakevens.length
-          ? `$${result.metrics.breakevens[0].toFixed(2)}`
-          : 'N/A',
-      },
+      breakevenItem(breakeven, stockPrice),
     ]),
   ];
 
   if (result.greeks) {
-    sections.push(
-      gridSection('Greeks at Entry', [
-        { label: 'Delta (Δ)', value: result.greeks.delta.toFixed(3) },
-        { label: 'Gamma (Γ)', value: result.greeks.gamma.toFixed(4) },
-        { label: 'Theta (Θ)', value: result.greeks.theta.toFixed(3) },
-        { label: 'Vega (ν)', value: result.greeks.vega.toFixed(3) },
-      ]),
-    );
+    sections.push(gridSection('Greeks at Entry', greekMetricItems(result.greeks)));
   }
 
   return sections;
@@ -346,27 +390,22 @@ function spreadMetrics(
     },
     {
       label: isCredit ? 'Total Credit' : 'Total Cost',
-      value: fmtMoney(total),
+      value: fmtCompactMoney(total),
+      variant: isCredit ? 'profit' : 'loss',
     },
     {
       label: 'Max Profit',
-      value: fmtMoney(result.metrics.maxProfit),
+      value: fmtSignedCompactMoney(result.metrics.maxProfit as number).text,
       variant: 'profit',
     },
     {
       label: 'Max Loss',
-      value: fmtMoney(result.metrics.maxLoss),
-      variant: 'loss',
+      ...lossValueItem(result.metrics.maxLoss),
     },
-    {
-      label: 'Breakeven',
-      value: result.metrics.breakevens.length
-        ? `$${result.metrics.breakevens[0].toFixed(2)}`
-        : 'N/A',
-    },
+    breakevenItem(result.metrics.breakevens[0], num(values, 'stockPrice')),
     {
       label: 'Max Return on Risk',
-      value: fmtPct(maxReturn),
+      value: fmtSignedPct(maxReturn),
       variant: maxReturn >= 0 ? 'profit' : 'loss',
     },
   ];
@@ -425,15 +464,13 @@ function multiLegVolatilityMetrics(
     result.metrics.breakevens.length > 1 ? 'Lower B/E' : 'Breakeven';
   const upperBreakeven =
     result.metrics.breakevens.length > 1
-      ? {
-          label: 'Upper B/E',
-          value: `$${result.metrics.breakevens[1].toFixed(2)}`,
-        }
+      ? breakevenItem(result.metrics.breakevens[1], num(values, 'stockPrice'), 'Upper B/E')
       : null;
 
   const creditItem: MetricItem = {
     label: isCredit ? 'Collect credit' : 'Pay debit',
-    value: fmtMoney(total),
+    value: fmtCompactMoney(total),
+    variant: isCredit ? 'profit' : 'loss',
   };
   const ivItem: MetricItem = {
     label: 'Implied Volatility',
@@ -441,26 +478,20 @@ function multiLegVolatilityMetrics(
   };
   const returnItem: MetricItem = {
     label: 'Return on Risk',
-    value: fmtPct(maxReturn),
+    value: fmtSignedPct(maxReturn),
     variant: maxReturn >= 0 ? 'profit' : 'loss',
   };
   const coreItems: MetricItem[] = [
     {
       label: 'Max Profit',
-      value: fmtMoney(result.metrics.maxProfit),
+      value: fmtSignedCompactMoney(result.metrics.maxProfit as number).text,
       variant: 'profit',
     },
     {
       label: 'Max Loss',
-      value: fmtMoney(result.metrics.maxLoss),
-      variant: 'loss',
+      ...lossValueItem(result.metrics.maxLoss),
     },
-    {
-      label: breakevenLabel,
-      value: result.metrics.breakevens.length
-        ? `$${result.metrics.breakevens[0].toFixed(2)}`
-        : 'N/A',
-    },
+    breakevenItem(result.metrics.breakevens[0], num(values, 'stockPrice'), breakevenLabel),
   ];
   if (upperBreakeven) coreItems.push(upperBreakeven);
 
@@ -471,14 +502,7 @@ function multiLegVolatilityMetrics(
   const sections: MetricSection[] = [gridSection(undefined, items)];
 
   if (result.greeks) {
-    sections.push(
-      gridSection('Greeks at Entry', [
-        { label: 'Delta (Δ)', value: result.greeks.delta.toFixed(3) },
-        { label: 'Gamma (Γ)', value: result.greeks.gamma.toFixed(4) },
-        { label: 'Theta (Θ)', value: result.greeks.theta.toFixed(3) },
-        { label: 'Vega (ν)', value: result.greeks.vega.toFixed(3) },
-      ]),
-    );
+    sections.push(gridSection('Greeks at Entry', greekMetricItems(result.greeks)));
   }
 
   return sections;
@@ -555,33 +579,29 @@ export function buildCalculatorVisualization(
       });
       metricSections = [
         gridSection(undefined, [
-          { label: 'Cash Requirement', value: fmtMoney(cashRequirement) },
-          { label: 'Credit Received', value: fmtMoney(credit), variant: 'profit' },
+          { label: 'Cash Requirement', value: fmtCompactMoney(cashRequirement) },
+          { label: 'Credit Received', value: fmtCompactMoney(credit), variant: 'profit' },
         ]),
         rowSection('Profit Scenarios', [
           {
             label: 'Shares Called Away (Max)',
-            value: fmtMoney(metrics.maxProfit as number),
-            secondary: fmtPct(maxReturn),
+            value: fmtSignedCompactMoney(metrics.maxProfit as number).text,
+            secondary: fmtSignedPct(maxReturn),
             variant: 'profit',
           },
           {
             label: 'Shares Flat (Premium Yield)',
-            value: fmtMoney(credit),
-            secondary: fmtPct((premium / stockPrice) * 100),
+            value: fmtSignedCompactMoney(credit).text,
+            secondary: fmtSignedPct((premium / stockPrice) * 100),
             variant: 'profit',
           },
         ]),
         gridSection(undefined, [
-          {
-            label: 'Break-Even',
-            value: metrics.breakevens.length ? `$${metrics.breakevens[0].toFixed(2)}` : 'N/A',
-          },
+          breakevenItem(metrics.breakevens[0], stockPrice, 'Break-Even'),
           {
             label: 'Max Loss',
-            value: fmtMoney(metrics.maxLoss as number),
+            ...lossValueItem(metrics.maxLoss),
             secondary: '(stock to $0)',
-            variant: 'loss',
           },
         ]),
       ];
@@ -597,30 +617,26 @@ export function buildCalculatorVisualization(
       chartMarkers = buildMarkers(values, result, { strike, entryStockLabel: true });
       metricSections = [
         gridSection(undefined, [
-          { label: 'Cash Requirement', value: fmtMoney(cashRequirement) },
-          { label: 'Credit Received', value: fmtMoney(credit), variant: 'profit' },
+          { label: 'Cash Requirement', value: fmtCompactMoney(cashRequirement) },
+          { label: 'Credit Received', value: fmtCompactMoney(credit), variant: 'profit' },
         ]),
         rowSection('Scenarios', [
           {
             label: 'Expires OTM (Max Profit)',
-            value: fmtMoney(metrics.maxProfit as number),
+            value: fmtSignedCompactMoney(metrics.maxProfit as number).text,
             variant: 'profit',
           },
           {
             label: 'Assigned (Share Cost Basis)',
-            value: `$${assignedBasis.toFixed(2)}`,
+            value: fmtPremium(assignedBasis),
           },
         ]),
         gridSection(undefined, [
-          {
-            label: 'Break-Even',
-            value: metrics.breakevens.length ? `$${metrics.breakevens[0].toFixed(2)}` : 'N/A',
-          },
+          breakevenItem(metrics.breakevens[0], stockPrice, 'Break-Even'),
           {
             label: 'Max Loss',
-            value: fmtMoney(metrics.maxLoss as number),
+            ...lossValueItem(metrics.maxLoss),
             secondary: '(stock to $0)',
-            variant: 'loss',
           },
         ]),
       ];
@@ -662,26 +678,22 @@ export function buildCalculatorVisualization(
       metricSections = [
         gridSection(undefined, [
           { label: 'Net Debit', value: fmtPremium(netDebit) },
-          { label: 'Total Cost', value: fmtMoney(cost) },
+          { label: 'Total Cost', value: fmtCompactMoney(cost), variant: 'loss' },
         ]),
         gridSection('At Short Expiration', [
           {
             label: 'Max Profit (Est.)',
-            value: fmtMoney(metrics.maxProfit as number),
+            value: fmtSignedCompactMoney(metrics.maxProfit as number).text,
             variant: 'profit',
           },
           {
             label: 'Max Loss',
-            value: fmtMoney(metrics.maxLoss as number),
-            variant: 'loss',
+            ...lossValueItem(metrics.maxLoss),
           },
-          {
-            label: 'Breakeven',
-            value: metrics.breakevens.length ? `$${metrics.breakevens[0].toFixed(2)}` : 'N/A',
-          },
+          breakevenItem(metrics.breakevens[0], stockPrice),
           {
             label: 'Max Return',
-            value: fmtPct(maxReturn),
+            value: fmtSignedPct(maxReturn),
             variant: 'profit',
           },
         ]),
@@ -691,14 +703,7 @@ export function buildCalculatorVisualization(
         ]),
       ];
       if (result.greeks) {
-        metricSections.push(
-          gridSection('Entry Greeks', [
-            { label: 'Delta (Δ)', value: result.greeks.delta.toFixed(3) },
-            { label: 'Gamma (Γ)', value: result.greeks.gamma.toFixed(4) },
-            { label: 'Theta (Θ)', value: result.greeks.theta.toFixed(3) },
-            { label: 'Vega (ν)', value: result.greeks.vega.toFixed(3) },
-          ]),
-        );
+        metricSections.push(gridSection('Entry Greeks', greekMetricItems(result.greeks)));
       }
       break;
     }
@@ -744,32 +749,19 @@ export function buildCalculatorVisualization(
         gridSection(undefined, [
           {
             label: 'Max Profit',
-            value: fmtMoney(metrics.maxProfit),
+            value: fmtSignedCompactMoney(metrics.maxProfit as number).text,
             variant: 'profit',
           },
           {
             label: 'Max Loss',
-            value: fmtMoney(metrics.maxLoss),
-            variant: 'loss',
+            ...lossValueItem(metrics.maxLoss),
           },
           { label: 'Premium', value: fmtPremium(metrics.premium) },
-          {
-            label: 'Breakeven',
-            value: metrics.breakevens.length
-              ? metrics.breakevens.map((b) => `$${b.toFixed(2)}`).join(' / ')
-              : 'N/A',
-          },
+          breakevenItem(metrics.breakevens[0], stockPrice),
         ]),
       ];
       if (result.greeks) {
-        metricSections.push(
-          gridSection('Greeks', [
-            { label: 'Delta (Δ)', value: result.greeks.delta.toFixed(3) },
-            { label: 'Gamma (Γ)', value: result.greeks.gamma.toFixed(4) },
-            { label: 'Theta (Θ)', value: result.greeks.theta.toFixed(3) },
-            { label: 'Vega (ν)', value: result.greeks.vega.toFixed(3) },
-          ]),
-        );
+        metricSections.push(gridSection('Greeks', greekMetricItems(result.greeks)));
       }
   }
 

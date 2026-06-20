@@ -24,7 +24,10 @@ function formatSecondary(secondary: string): string {
 
 export function MetricValueDisplay({ item, compound = false }: { item: MetricItem; compound?: boolean }) {
   const valueClass = variantClass(item.variant);
-  const secondaryClass = secondaryVariantClass(item.secondaryVariant);
+  const secondaryClass =
+    item.secondaryStyle === 'percent-change'
+      ? secondaryVariantClass(item.secondaryVariant)
+      : secondaryVariantClass(item.secondaryVariant);
 
   if (compound && item.secondary) {
     return (
@@ -40,7 +43,15 @@ export function MetricValueDisplay({ item, compound = false }: { item: MetricIte
       {item.value}
       {item.badge ? <span className={`metric-badge ${item.badge.toLowerCase()}`}>{item.badge}</span> : null}
       {item.secondary ? (
-        <span className={`metric-secondary ${secondaryClass}`}> {formatSecondary(item.secondary)}</span>
+        <span
+          className={
+            item.secondaryStyle === 'percent-change'
+              ? `percent-change ${secondaryClass}`
+              : `metric-secondary ${secondaryClass}`
+          }
+        >
+          {item.secondaryStyle === 'percent-change' ? ` ${item.secondary}` : ` ${formatSecondary(item.secondary)}`}
+        </span>
       ) : null}
       {item.note ? <span className="metric-note"> {item.note}</span> : null}
     </span>
