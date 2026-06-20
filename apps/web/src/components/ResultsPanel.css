@@ -1,0 +1,66 @@
+.results-panel {
+  padding: 1.5rem;
+}
+
+.results-empty {
+  padding: 2rem;
+  text-align: center;
+}
+
+.results-empty p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.results-title,
+.greeks-title {
+  margin: 0 0 1rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.greeks-title {
+  margin-top: 1.25rem;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.metric {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.875rem 1rem;
+}
+
+.metric-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.metric-value {
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.metric-value.profit {
+  color: var(--profit);
+}
+
+.metric-value.loss {
+  color: var(--loss);
+}
+
+@media (max-width: 480px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}

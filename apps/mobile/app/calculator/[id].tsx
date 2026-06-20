@@ -12,7 +12,7 @@ import {
 import { NumberField } from '../../components/NumberField';
 import { PnLChart } from '../../components/PnLChart';
 import { ResultsPanel } from '../../components/ResultsPanel';
-import { colors, spacing } from '../../constants/theme';
+import { colors, radius, spacing } from '../../constants/theme';
 import { CALCULATOR_CONFIGS, useCalculator } from '../../hooks/useCalculator';
 
 export default function CalculatorScreen() {
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: radius.md,
     padding: spacing.lg,
   },
   formTitle: {
@@ -146,13 +146,13 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: colors.primary,
-    borderRadius: 10,
+    borderRadius: radius.sm,
     paddingVertical: spacing.md,
     alignItems: 'center',
     marginTop: spacing.sm,
   },
   buttonText: {
-    color: '#0a0a0a',
+    color: colors.buttonText,
     fontSize: 16,
     fontWeight: '700',
   },

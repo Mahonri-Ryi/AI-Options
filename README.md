@@ -1,18 +1,20 @@
 # AI Options
 
-Native iOS/Android options calculator app — a recreation of [projectoption.com](https://projectoption.com/calculators) calculators with a scalable market-data backend.
+Professional options calculators for iOS, Android, and web. Model profit and loss for every major strategy before you trade.
+
+**Live preview:** Once GitHub Pages is enabled, the web app is available at  
+`https://<your-username>.github.io/AI-Options/`
 
 ## What's included
 
 | Package | Purpose |
 |---------|---------|
 | `packages/options-core` | Shared Black-Scholes math, Greeks, IV solver, and all 20 strategy calculators |
+| `apps/web` | Web app (deployed to GitHub Pages) |
 | `apps/mobile` | Expo React Native app (iOS + Android) |
-| `apps/api` | Fastify market-data API with Redis caching and rate limiting |
+| `apps/api` | Fastify market-data API with caching and rate limiting |
 
 ## Calculators (20 total)
-
-Mirrors projectoption.com's free calculator suite:
 
 - **Single-leg:** Long Call, Long Put, Short Call, Short Put
 - **Vertical spreads:** Bull Call, Bull Put, Bear Put, Bear Call
@@ -20,66 +22,47 @@ Mirrors projectoption.com's free calculator suite:
 - **Volatility:** Straddle, Strangle, Iron Condor, Iron Butterfly
 - **Pricing & Greeks:** Options Pricing, Implied Volatility, Theta Decay, Expected Move
 
-## How projectoption.com gets market data
+## Quick start
 
-Based on reverse-engineering their production bundles:
+```bash
+npm install
+npm test
+npm run web        # Web dev server at http://localhost:5173
+npm run mobile     # Expo dev server
+npm run api        # API on :8001 (mock data without POLYGON_API_KEY)
+```
 
-### Free calculators — no live data
+### GitHub Pages setup
 
-The 20 free calculators at [projectoption.com/calculators](https://projectoption.com/calculators) are **fully client-side**. They use Black-Scholes-Merton pricing with manually entered inputs (stock price, strike, DTE, IV or option price). No API calls are made — all math runs in the browser via their `greeks.*` and `implied-volatility.*` Astro JS modules.
+1. Go to **Settings → Pages** in your GitHub repo
+2. Under **Build and deployment**, set **Source** to **Deploy from a branch**
+3. Select the **`gh-pages`** branch and **`/ (root)`** folder
+4. Push to `main` (or this feature branch) — the workflow builds and deploys automatically
+5. Your app will be live at: **https://mahonri-ryi.github.io/AI-Options/**
 
-### Premium features — backend-proxied live data
-
-Their paid Option Modeler and IV Screener use:
-
-1. **Supabase** — authentication (PKCE flow), user profiles, saved portfolios
-2. **`api.projectoption.com`** — backend API that proxies market data (discovered in their `auth.*.js` bundle: `origin.replace("www.", "api.")`)
-3. **Commercial options feed** (inferred) — coverage of 4,000+ US equities/ETFs with live chains, quotes, and Greeks strongly suggests **Polygon.io** or an equivalent vendor (Tradier, Market Data API, Intrinio)
-
-They never expose vendor API keys to the client. All live data flows: **Mobile/Browser → their API → market data vendor**.
-
-### Our architecture (designed for 100k+ users)
+## Architecture
 
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  iOS / Android  │────▶│   Fastify API    │────▶│  Polygon.io     │
-│  (Expo RN app)  │     │  + Redis cache   │     │  (or Tradier)   │
+│  Web / Mobile   │────▶│   Fastify API    │────▶│  Polygon.io     │
+│                 │     │  + cache layer   │     │  (market data)  │
 └────────┬────────┘     └──────────────────┘     └─────────────────┘
          │
          ▼
 ┌─────────────────┐
 │  options-core   │  ← All P/L math runs on-device (zero latency)
-│  (TypeScript)   │
 └─────────────────┘
 ```
 
-**Scaling principles:**
-
 | Layer | Strategy |
 |-------|----------|
-| Calculations | On-device via `options-core` — no server load for free calculators |
-| Market data | Redis cache (15s quotes, 60s chains), rate limiting (120 req/min/IP) |
-| API | Horizontally scalable Fastify on Cloud Run / ECS / Railway |
-| CDN | Cache static responses at edge for symbol search |
-| Cost control | One Polygon subscription serves all users via shared cache |
+| Calculations | On-device via `options-core` — no server load |
+| Market data | Cached API proxy (15s quotes, 60s chains) |
+| Web | Static Vite build on GitHub Pages |
 
-## Quick start
+See `docs/ARCHITECTURE.md` for full details.
 
-```bash
-# Install dependencies
-npm install
-
-# Run tests
-npm test
-
-# Start API (mock data without POLYGON_API_KEY)
-npm run api
-
-# Start mobile app
-npm run mobile
-```
-
-### Environment variables
+## Environment variables
 
 ```bash
 # apps/api
@@ -88,50 +71,16 @@ REDIS_URL=redis://localhost:6379  # Optional — uses in-memory cache if unset
 PORT=8001
 ```
 
-## Mobile development
-
-```bash
-cd apps/mobile
-npx expo start
-
-# iOS simulator
-npx expo start --ios
-
-# Android emulator
-npx expo start --android
-```
-
-## API endpoints
-
-| Endpoint | Description | Cache TTL |
-|----------|-------------|-----------|
-| `GET /health` | Health check | — |
-| `GET /api/v1/quote/:symbol` | Stock quote | 15s |
-| `GET /api/v1/options/:symbol/chain` | Options chain | 60s |
-| `GET /api/v1/search?q=AAP` | Symbol search | 5min |
-
 ## Project structure
 
 ```
 ai-options/
 ├── packages/options-core/     # Shared math library
-│   ├── src/math/              # Black-Scholes, IV, curves
-│   └── src/strategies/        # All 20 calculators
+├── apps/web/                  # GitHub Pages web app
 ├── apps/mobile/               # Expo React Native app
-│   ├── app/                   # Expo Router screens
-│   └── components/            # UI components
 ├── apps/api/                  # Market data API
-│   └── src/providers/         # Polygon + mock providers
-└── docs/ARCHITECTURE.md       # Detailed architecture
+└── docs/ARCHITECTURE.md
 ```
-
-## Next steps
-
-1. **Wire live data into mobile** — connect calculator screens to pre-fill stock price/IV from API
-2. **Add Option Modeler** — multi-leg portfolio builder (projectoption premium feature)
-3. **IV Screener** — backend job to pre-compute IV rank/percentile for 300+ tickers
-4. **Auth + saved portfolios** — Supabase or Firebase for user accounts
-5. **App Store deployment** — EAS Build for iOS/Android submission
 
 ## License
 

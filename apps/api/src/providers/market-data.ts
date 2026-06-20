@@ -30,9 +30,8 @@ interface PolygonTickerResult {
 }
 
 /**
- * Polygon.io is the recommended provider for US options chains at scale.
- * projectoption.com proxies live data through api.projectoption.com (Supabase auth),
- * almost certainly sourcing from a commercial feed like Polygon or similar.
+ * Polygon.io provider for US options chains at scale.
+ * API keys must remain server-side — never expose to clients.
  */
 export class PolygonProvider implements MarketDataProvider {
   constructor(

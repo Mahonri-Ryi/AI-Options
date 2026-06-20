@@ -6,10 +6,12 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build -w @ai-options/core && npm run build -w @ai-options/api",
+    "build": "npm run build -w @ai-options/core && npm run build -w @ai-options/api && npm run build -w @ai-options/web",
+    "build:web": "npm run build -w @ai-options/core && npm run build -w @ai-options/web",
     "test": "npm run test -w @ai-options/core",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "mobile": "npm run start -w @ai-options/mobile",
+    "web": "npm run dev -w @ai-options/web",
     "api": "npm run dev -w @ai-options/api"
   },
   "engines": {
