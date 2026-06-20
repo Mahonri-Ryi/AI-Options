@@ -1,0 +1,56 @@
+.pricing-results .prices-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 1rem;
+}
+
+.price-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1rem;
+  border: 1px solid rgba(85, 207, 255, 0.15);
+  border-radius: 10px;
+  background: rgba(85, 207, 255, 0.05);
+}
+
+.price-card-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.price-card-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.greeks-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.greeks-table th,
+.greeks-table td {
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+}
+
+.greeks-table th:first-child,
+.greeks-table td:first-child {
+  text-align: left;
+  color: var(--text-muted);
+}
+
+.greeks-table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}

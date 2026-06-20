@@ -170,6 +170,20 @@
   background: var(--border);
 }
 
-.legend-label {
-  white-space: nowrap;
+.legend-dash.marker-strike {
+  border-top-color: #f59e0b;
+}
+
+.legend-dash.marker-longStrike {
+  border-top-color: #a78bfa;
+}
+
+.legend-dash.marker-shortStrike {
+  border-top-color: #ff6b6b;
+}
+
+.legend-item.long-stock .legend-line.stock-line {
+  background: transparent;
+  border-top: 2px dotted rgba(255, 255, 255, 0.45);
+  height: 0;
 }

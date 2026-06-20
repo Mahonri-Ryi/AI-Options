@@ -7,6 +7,7 @@ import type {
   MetricSection,
 } from './types.js';
 import { CALCULATOR_CONFIGS } from './calculator-configs.js';
+import { impliedVolatility } from './math/volatility.js';
 
 function num(values: Record<string, string>, key: string, fallback = 0): number {
   const parsed = Number(values[key]);
@@ -72,13 +73,84 @@ function buildChartSeries(
   return series;
 }
 
+function moneyness(
+  stockPrice: number,
+  strike: number,
+  type: 'call' | 'put',
+): 'ITM' | 'ATM' | 'OTM' {
+  if (Math.abs(stockPrice - strike) / strike < 0.02) return 'ATM';
+  if (type === 'call') return stockPrice > strike ? 'ITM' : 'OTM';
+  return stockPrice < strike ? 'ITM' : 'OTM';
+}
+
+function pctChange(from: number, to: number): string {
+  if (from === 0) return '0.0%';
+  const pct = ((to - from) / from) * 100;
+  const sign = pct >= 0 ? '+' : '';
+  return `${sign}${pct.toFixed(1)}%`;
+}
+
+function buildChartSubtitle(
+  calculatorId: string,
+  values: Record<string, string>,
+  result: CalculatorResult,
+): string {
+  const strike = num(values, 'strike');
+  const dte = num(values, 'dte');
+  const premium = result.metrics.premium;
+  switch (calculatorId) {
+    case 'long-call':
+      return `${strike} Call @ ${fmtPremium(premium)} (${dte} DTE)`;
+    case 'long-put':
+      return `${strike} Put @ ${fmtPremium(premium)} (${dte} DTE)`;
+    case 'short-call':
+      return `${strike} Call @ ${fmtPremium(premium)} (${dte} DTE)`;
+    case 'short-put':
+      return `${strike} Put @ ${fmtPremium(premium)} (${dte} DTE)`;
+    case 'covered-call':
+      return `${strike} Call @ ${fmtPremium(premium)} (${dte} DTE)`;
+    case 'cash-secured-put':
+      return `${strike} Put @ ${fmtPremium(premium)} (${dte} DTE)`;
+    case 'pmcc':
+      return `${num(values, 'longStrike')} / ${num(values, 'shortStrike')} (${num(values, 'shortDte')} DTE short)`;
+    default:
+      return '';
+  }
+}
+
+const CHART_TITLE_SHORT: Record<string, string> = {
+  'long-call': 'Long',
+  'long-put': 'Long',
+  'short-call': 'Short Call',
+  'short-put': 'Short Put',
+  'bull-call-spread': 'Bull Call Spread',
+  'bull-put-spread': 'Bull Put Spread',
+  'bear-put-spread': 'Bear Put Spread',
+  'bear-call-spread': 'Bear Call Spread',
+  'covered-call': 'Covered Call',
+  'cash-secured-put': 'Cash-Secured Put',
+  pmcc: 'PMCC',
+  straddle: 'Straddle',
+  strangle: 'Strangle',
+  'iron-condor': 'Iron Condor',
+  'iron-butterfly': 'Iron Butterfly',
+};
+
 function buildMarkers(
   values: Record<string, string>,
   result: CalculatorResult,
   options: {
     strike?: number;
+    strikeLabel?: string;
     longStrike?: number;
     shortStrike?: number;
+    longDte?: number;
+    shortDte?: number;
+    longPremium?: number;
+    shortPremium?: number;
+    skipLegMarkers?: boolean;
+    entryStockLabel?: boolean;
+    breakevenShortLabel?: boolean;
   } = {},
 ): ChartMarker[] {
   const markers: ChartMarker[] = [];
@@ -87,35 +159,41 @@ function buildMarkers(
     markers.push({
       type: 'current',
       value: stockPrice,
-      label: `Entry Stock: $${stockPrice.toFixed(2)}`,
+      label: options.entryStockLabel
+        ? `Entry Stock: $${stockPrice.toFixed(2)}`
+        : `Stock: $${stockPrice.toFixed(2)}`,
+      color: 'rgba(255,255,255,0.5)',
     });
   }
   if (options.strike !== undefined) {
     markers.push({
       type: 'strike',
       value: options.strike,
-      label: `Strike: $${options.strike.toFixed(2)}`,
+      label: `${options.strikeLabel ?? 'Strike'}: $${options.strike.toFixed(0)}`,
+      color: '#f59e0b',
     });
   }
-  if (options.longStrike !== undefined) {
+  if (options.longStrike !== undefined && !options.skipLegMarkers) {
     markers.push({
       type: 'longStrike',
       value: options.longStrike,
-      label: `Long Strike: $${options.longStrike.toFixed(2)}`,
+      label: `Long Strike: $${options.longStrike.toFixed(0)}`,
     });
   }
-  if (options.shortStrike !== undefined) {
+  if (options.shortStrike !== undefined && !options.skipLegMarkers) {
     markers.push({
       type: 'shortStrike',
       value: options.shortStrike,
-      label: `Short Strike: $${options.shortStrike.toFixed(2)}`,
+      label: `Short Strike: $${options.shortStrike.toFixed(0)}`,
     });
   }
+  const bePrefix = options.breakevenShortLabel ? 'B/E' : 'Breakeven';
   for (const breakeven of result.metrics.breakevens) {
     markers.push({
       type: 'breakeven',
       value: breakeven,
-      label: `Breakeven: $${breakeven.toFixed(2)}`,
+      label: `${bePrefix}: $${breakeven.toFixed(2)}`,
+      color: '#2df3b0',
     });
   }
   return markers;
@@ -135,43 +213,85 @@ function longLegMetrics(
   const totalCost = premium * 100 * num(values, 'quantity', 1);
   const maxLossPct = totalCost > 0 ? (totalCost / totalCost) * 100 : 100;
 
+  const quantity = num(values, 'quantity', 1);
+  const badge = moneyness(stockPrice, strike, type);
+  const breakeven = result.metrics.breakevens[0] ?? strike + premium;
+
   const sections: MetricSection[] = [
     gridSection(undefined, [
-      { label: 'Total Cost', value: fmtMoney(totalCost) },
-      { label: 'Intrinsic Value', value: fmtPremium(intrinsic) },
-      { label: 'Extrinsic Value', value: fmtPremium(extrinsic) },
+      {
+        label: 'Option Price',
+        value: fmtPremium(premium),
+        badge,
+      },
+      {
+        label: 'Total Cost',
+        value: fmtMoney(totalCost),
+        secondary: 'debit',
+      },
+    ]),
+    gridSection(undefined, [
+      {
+        label: 'Intrinsic Value',
+        value: fmtPremium(intrinsic),
+        secondary: fmtMoney(intrinsic * 100 * quantity),
+      },
+      {
+        label: 'Extrinsic Value',
+        value: fmtPremium(extrinsic),
+        secondary: fmtMoney(extrinsic * 100 * quantity),
+      },
       {
         label: 'Breakeven',
-        value: result.metrics.breakevens.length
-          ? `$${result.metrics.breakevens[0].toFixed(2)}`
-          : 'N/A',
+        value: `$${breakeven.toFixed(2)}`,
+        secondary: pctChange(stockPrice, breakeven),
       },
       {
         label: 'Max Loss',
         value: fmtMoney(result.metrics.maxLoss as number),
-        secondary: `(${maxLossPct.toFixed(0)}%)`,
+        secondary: '(100%)',
         variant: 'loss',
       },
     ]),
   ];
 
   if (result.greeks) {
-    sections.push(
-      gridSection('Greeks at Entry', [
-        { label: 'Delta (Δ)', value: result.greeks.delta.toFixed(3) },
-        { label: 'Theta (Θ)', value: result.greeks.theta.toFixed(3) },
-        { label: 'Implied Vol', value: `${num(values, 'iv', 25).toFixed(1)}%` },
-      ]),
-    );
+    const showIv = values.calculationMode === 'price';
+    const greeksItems: MetricItem[] = [
+      {
+        label: 'Delta (Δ)',
+        value: result.greeks.delta.toFixed(3),
+        secondary: `(${(result.greeks.delta / quantity).toFixed(3)}/contract)`,
+      },
+      {
+        label: 'Theta (Θ)',
+        value: `${result.greeks.theta.toFixed(3)}/day`,
+      },
+    ];
+    if (showIv) {
+      greeksItems.push({
+        label: 'Implied Vol',
+        value: `${num(values, 'iv', 25).toFixed(1)}%`,
+      });
+    }
+    sections.push(gridSection('Greeks at Entry', greeksItems));
   }
 
   return sections;
 }
 
-function shortLegMetrics(result: CalculatorResult, quantity: number): MetricSection[] {
+function shortLegMetrics(
+  result: CalculatorResult,
+  values: Record<string, string>,
+  quantity: number,
+): MetricSection[] {
   const sections: MetricSection[] = [
     gridSection(undefined, [
       { label: 'Credit Received', value: fmtMoney(result.metrics.premium * 100 * quantity) },
+      {
+        label: 'Implied Volatility',
+        value: `${num(values, 'iv', 25).toFixed(1)}%`,
+      },
       {
         label: 'Max Profit',
         value: fmtMoney(result.metrics.maxProfit),
@@ -208,6 +328,7 @@ function spreadMetrics(
   result: CalculatorResult,
   values: Record<string, string>,
   isCredit: boolean,
+  calculatorId: string,
 ): MetricSection[] {
   const quantity = num(values, 'quantity', 1);
   const net = Math.abs(result.metrics.netPremium);
@@ -217,45 +338,68 @@ function spreadMetrics(
       ? ((result.metrics.maxProfit as number) / result.metrics.maxLoss) * 100
       : 0;
 
-  return [
-    gridSection(undefined, [
-      {
-        label: isCredit ? 'Credit Received' : 'Spread Price',
-        value: fmtPremium(net),
-      },
-      {
-        label: isCredit ? 'Total Credit' : 'Total Cost',
-        value: fmtMoney(total),
-      },
-      {
-        label: 'Max Profit',
-        value: fmtMoney(result.metrics.maxProfit),
-        variant: 'profit',
-      },
-      {
-        label: 'Max Loss',
-        value: fmtMoney(result.metrics.maxLoss),
-        variant: 'loss',
-      },
-      {
-        label: 'Breakeven',
-        value: result.metrics.breakevens.length
-          ? `$${result.metrics.breakevens[0].toFixed(2)}`
-          : 'N/A',
-      },
-      {
-        label: 'Max Return on Risk',
-        value: fmtPct(maxReturn),
-        variant: maxReturn >= 0 ? 'profit' : 'loss',
-      },
-    ]),
+  const items: MetricItem[] = [
+    {
+      label: isCredit ? 'Credit Received' : 'Spread Price',
+      value: fmtPremium(net),
+    },
+    {
+      label: isCredit ? 'Total Credit' : 'Total Cost',
+      value: fmtMoney(total),
+    },
+    {
+      label: 'Max Profit',
+      value: fmtMoney(result.metrics.maxProfit),
+      variant: 'profit',
+    },
+    {
+      label: 'Max Loss',
+      value: fmtMoney(result.metrics.maxLoss),
+      variant: 'loss',
+    },
+    {
+      label: 'Breakeven',
+      value: result.metrics.breakevens.length
+        ? `$${result.metrics.breakevens[0].toFixed(2)}`
+        : 'N/A',
+    },
+    {
+      label: 'Max Return on Risk',
+      value: fmtPct(maxReturn),
+      variant: maxReturn >= 0 ? 'profit' : 'loss',
+    },
   ];
+
+  if (values.calculationMode === 'price') {
+    const stockPrice = num(values, 'stockPrice');
+    const dte = num(values, 'dte');
+    const rate = num(values, 'riskFreeRate');
+    const longStrike = num(values, 'longStrike');
+    const shortStrike = num(values, 'shortStrike');
+    const longPrice = num(values, 'longOptionPrice');
+    const shortPrice = num(values, 'shortOptionPrice');
+    const isCall =
+      calculatorId === 'bull-call-spread' || calculatorId === 'bear-call-spread';
+    const longType = isCall ? 'call' : 'put';
+    const shortType = isCall ? 'call' : 'put';
+    const longLegLabel = isCall ? 'Long Call IV' : 'Long Put IV';
+    const shortLegLabel = isCall ? 'Short Call IV' : 'Short Put IV';
+    const longIv = impliedVolatility(longType, longPrice, stockPrice, longStrike, dte, rate);
+    const shortIv = impliedVolatility(shortType, shortPrice, stockPrice, shortStrike, dte, rate);
+    items.push(
+      { label: shortLegLabel, value: `${shortIv.toFixed(1)}%` },
+      { label: longLegLabel, value: `${longIv.toFixed(1)}%` },
+    );
+  }
+
+  return [gridSection(undefined, items)];
 }
 
 function multiLegVolatilityMetrics(
   result: CalculatorResult,
   values: Record<string, string>,
   isCredit: boolean,
+  calculatorId: string,
 ): MetricSection[] {
   const quantity = num(values, 'quantity', 1);
   const net = Math.abs(result.metrics.netPremium);
@@ -264,6 +408,7 @@ function multiLegVolatilityMetrics(
     typeof result.metrics.maxLoss === 'number' && result.metrics.maxLoss > 0
       ? ((result.metrics.maxProfit as number) / result.metrics.maxLoss) * 100
       : 0;
+  const isIron = calculatorId === 'iron-condor' || calculatorId === 'iron-butterfly';
 
   const breakevenLabel =
     result.metrics.breakevens.length > 1 ? 'Lower B/E' : 'Breakeven';
@@ -275,15 +420,20 @@ function multiLegVolatilityMetrics(
         }
       : null;
 
-  const items: MetricItem[] = [
-    {
-      label: isCredit ? 'Collect credit' : 'Pay debit',
-      value: fmtMoney(total),
-    },
-    {
-      label: 'Implied Volatility',
-      value: `${num(values, 'iv', 25).toFixed(1)}%`,
-    },
+  const creditItem: MetricItem = {
+    label: isCredit ? 'Collect credit' : 'Pay debit',
+    value: fmtMoney(total),
+  };
+  const ivItem: MetricItem = {
+    label: 'Implied Volatility',
+    value: `${num(values, 'iv', 25).toFixed(1)}%`,
+  };
+  const returnItem: MetricItem = {
+    label: 'Return on Risk',
+    value: fmtPct(maxReturn),
+    variant: maxReturn >= 0 ? 'profit' : 'loss',
+  };
+  const coreItems: MetricItem[] = [
     {
       label: 'Max Profit',
       value: fmtMoney(result.metrics.maxProfit),
@@ -301,12 +451,11 @@ function multiLegVolatilityMetrics(
         : 'N/A',
     },
   ];
-  if (upperBreakeven) items.push(upperBreakeven);
-  items.push({
-    label: 'Return on Risk',
-    value: fmtPct(maxReturn),
-    variant: maxReturn >= 0 ? 'profit' : 'loss',
-  });
+  if (upperBreakeven) coreItems.push(upperBreakeven);
+
+  const items: MetricItem[] = isIron
+    ? [creditItem, returnItem, ...coreItems, ivItem]
+    : [ivItem, creditItem, ...coreItems];
 
   const sections: MetricSection[] = [gridSection(undefined, items)];
 
@@ -341,33 +490,44 @@ export function buildCalculatorVisualization(
 
   switch (calculatorId) {
     case 'long-call':
-      chartMarkers = buildMarkers(values, result, { strike: num(values, 'strike') });
+      chartMarkers = buildMarkers(values, result, {
+        strike: num(values, 'strike'),
+        entryStockLabel: true,
+      });
       metricSections = longLegMetrics(result, values, 'call');
       break;
     case 'long-put':
-      chartMarkers = buildMarkers(values, result, { strike: num(values, 'strike') });
+      chartMarkers = buildMarkers(values, result, {
+        strike: num(values, 'strike'),
+        entryStockLabel: true,
+      });
       metricSections = longLegMetrics(result, values, 'put');
       break;
     case 'short-call':
     case 'short-put':
-      chartMarkers = buildMarkers(values, result, { strike: num(values, 'strike') });
-      metricSections = shortLegMetrics(result, quantity);
+      chartMarkers = buildMarkers(values, result, {
+        strike: num(values, 'strike'),
+        breakevenShortLabel: true,
+      });
+      metricSections = shortLegMetrics(result, values, quantity);
       break;
     case 'bull-call-spread':
     case 'bear-put-spread':
       chartMarkers = buildMarkers(values, result, {
         longStrike: num(values, 'longStrike'),
         shortStrike: num(values, 'shortStrike'),
+        breakevenShortLabel: true,
       });
-      metricSections = spreadMetrics(result, values, false);
+      metricSections = spreadMetrics(result, values, false, calculatorId);
       break;
     case 'bull-put-spread':
     case 'bear-call-spread':
       chartMarkers = buildMarkers(values, result, {
         longStrike: num(values, 'longStrike'),
         shortStrike: num(values, 'shortStrike'),
+        breakevenShortLabel: true,
       });
-      metricSections = spreadMetrics(result, values, true);
+      metricSections = spreadMetrics(result, values, true, calculatorId);
       break;
     case 'covered-call': {
       const strike = num(values, 'strike');
@@ -377,7 +537,11 @@ export function buildCalculatorVisualization(
       const maxReturn =
         cashRequirement > 0 ? ((metrics.maxProfit as number) / cashRequirement) * 100 : 0;
       chartSeries = buildChartSeries(result, { quantity });
-      chartMarkers = buildMarkers(values, result, { strike });
+      chartMarkers = buildMarkers(values, result, {
+        strike,
+        strikeLabel: 'Call Strike',
+        breakevenShortLabel: true,
+      });
       metricSections = [
         gridSection(undefined, [
           { label: 'Cash Requirement', value: fmtMoney(cashRequirement) },
@@ -419,7 +583,7 @@ export function buildCalculatorVisualization(
       const credit = premium * 100 * quantity;
       const assignedBasis = strike - premium;
       chartSeries = buildChartSeries(result, { quantity });
-      chartMarkers = buildMarkers(values, result, { strike });
+      chartMarkers = buildMarkers(values, result, { strike, breakevenShortLabel: true });
       metricSections = [
         gridSection(undefined, [
           { label: 'Cash Requirement', value: fmtMoney(cashRequirement) },
@@ -460,10 +624,21 @@ export function buildCalculatorVisualization(
         quantity,
         expirationLabel: `T+${shortDte} (Short Exp)`,
       });
-      chartMarkers = buildMarkers(values, result, {
-        longStrike: num(values, 'longStrike'),
-        shortStrike: num(values, 'shortStrike'),
-      });
+      chartMarkers = buildMarkers(values, result, { skipLegMarkers: true });
+      chartMarkers.push(
+        {
+          type: 'longStrike',
+          value: num(values, 'longStrike'),
+          label: `Long Call: $${num(values, 'longStrike')} (${num(values, 'longDte')} DTE)`,
+          color: '#a78bfa',
+        },
+        {
+          type: 'shortStrike',
+          value: num(values, 'shortStrike'),
+          label: `Short Call: $${num(values, 'shortStrike')} (${shortDte} DTE)`,
+          color: '#ff6b6b',
+        },
+      );
       metricSections = [
         gridSection(undefined, [
           { label: 'Net Debit', value: fmtPremium(netDebit) },
@@ -514,6 +689,7 @@ export function buildCalculatorVisualization(
         result,
         values,
         values.positionType === 'short',
+        calculatorId,
       );
       break;
     case 'iron-condor':
@@ -523,6 +699,7 @@ export function buildCalculatorVisualization(
         result,
         values,
         values.positionType === 'short',
+        calculatorId,
       );
       break;
     default:
@@ -562,8 +739,15 @@ export function buildCalculatorVisualization(
 
   return {
     chartTitle: title,
+    chartTitleShort: CHART_TITLE_SHORT[calculatorId] ?? title,
+    chartSubtitle: buildChartSubtitle(calculatorId, values, result),
     chartSeries,
     chartMarkers,
     metricSections,
+    chartNote:
+      values.calculationMode === 'price' &&
+      (calculatorId === 'iron-condor' || calculatorId === 'iron-butterfly')
+        ? 'The T+0 line uses a single IV for all legs in price mode.'
+        : undefined,
   };
 }

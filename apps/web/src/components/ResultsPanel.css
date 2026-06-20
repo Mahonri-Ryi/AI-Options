@@ -55,7 +55,46 @@
   color: var(--profit);
 }
 
-.metric-value.loss {
+.metric-value.loss,
+.metric-value.negative {
+  color: var(--loss);
+}
+
+.metric-value.positive {
+  color: var(--profit);
+}
+
+.metric-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.metric-badge.itm {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--profit);
+}
+
+.metric-badge.atm {
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--text-muted);
+}
+
+.metric-badge.otm {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--loss);
+}
+
+.metric-secondary.profit {
+  color: var(--profit);
+}
+
+.metric-secondary.loss {
   color: var(--loss);
 }
 

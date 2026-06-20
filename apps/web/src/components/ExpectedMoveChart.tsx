@@ -11,10 +11,7 @@ interface ExpectedMoveChartProps {
 export function ExpectedMoveChart({ cone, stockPrice, maxDte }: ExpectedMoveChartProps) {
   const [descending, setDescending] = useState(true);
 
-  const data = useMemo(
-    () => (descending ? [...cone].reverse() : cone),
-    [cone, descending],
-  );
+  const data = useMemo(() => (descending ? [...cone].reverse() : cone), [cone, descending]);
 
   if (data.length < 2) return null;
 
@@ -50,7 +47,12 @@ export function ExpectedMoveChart({ cone, stockPrice, maxDte }: ExpectedMoveChar
   const centerY = y(stockPrice);
 
   return (
-    <div className="expected-move-chart">
+    <div className="expected-move-chart chart-container">
+      <div className="chart-header">
+        <span className="chart-title-bold">Expected Move:</span>
+        <span className="chart-title-details"> ±1σ range over {maxDte} DTE</span>
+      </div>
+
       <svg viewBox={`0 0 ${width} ${height}`} className="em-svg">
         <line
           x1={padding.left}
@@ -80,11 +82,11 @@ export function ExpectedMoveChart({ cone, stockPrice, maxDte }: ExpectedMoveChar
       <div className="em-legend">
         <span className="legend-item">
           <span className="legend-swatch em-swatch" />
-          Expected move cone (±1σ, 68.2%)
+          Expected Range (1σ)
         </span>
         <span className="legend-item">
           <span className="legend-dash em-dash" />
-          Current stock ${stockPrice.toFixed(2)}
+          Stock Price: ${stockPrice.toFixed(2)}
         </span>
       </div>
 

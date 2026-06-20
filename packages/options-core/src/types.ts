@@ -72,13 +72,18 @@ export interface ChartMarker {
   type: ChartMarkerType;
   value: number;
   label?: string;
+  color?: string;
+  dashStyle?: 'solid' | 'dashed' | 'dotted';
 }
 
 export interface MetricItem {
   label: string;
   value: string;
-  variant?: 'profit' | 'loss' | 'neutral';
+  variant?: 'profit' | 'loss' | 'neutral' | 'positive' | 'negative';
   secondary?: string;
+  secondaryVariant?: 'profit' | 'loss' | 'neutral' | 'positive' | 'negative';
+  badge?: 'ITM' | 'OTM' | 'ATM';
+  note?: string;
 }
 
 export interface MetricSection {
@@ -89,9 +94,20 @@ export interface MetricSection {
 
 export interface CalculatorVisualization {
   chartTitle: string;
+  chartTitleShort?: string;
+  chartSubtitle?: string;
   chartSeries: ChartSeries[];
   chartMarkers: ChartMarker[];
   metricSections: MetricSection[];
+  chartNote?: string;
+}
+
+export interface PricingResult {
+  callPrice: number;
+  putPrice: number;
+  callGreeks: Greeks;
+  putGreeks: Greeks;
+  model: 'bs' | 'crr';
 }
 
 export interface CalculatorResult {
@@ -103,6 +119,8 @@ export interface CalculatorResult {
   chartAxes?: ChartAxes;
   greeks?: Greeks;
   visualization?: CalculatorVisualization;
+  pricingResult?: PricingResult;
+  ivConverged?: boolean;
   expectedMoveDetail?: ExpectedMoveDetail;
   expectedMoveCone?: ExpectedMoveConePoint[];
   thetaDecayDetail?: ThetaDecayDetail;

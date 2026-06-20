@@ -10,7 +10,6 @@ interface PnLChartProps {
   chartAxes?: ChartAxes;
 }
 
-
 function interpolatePnL(curve: PnLPoint[], stockPrice: number): number {
   if (!curve.length) return 0;
   if (stockPrice <= curve[0].stockPrice) return curve[0].pnl;
@@ -30,14 +29,12 @@ export function PnLChart({
   visualization,
   data,
   theoreticalData,
-  currentPrice,
   chartAxes,
 }: PnLChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<{
     stockPrice: number;
     x: number;
-    y: number;
     pnls: Array<{ label: string; pnl: number; style: string }>;
   } | null>(null);
 
@@ -64,7 +61,8 @@ export function PnLChart({
   }, [visualization, data, theoreticalData]);
 
   const markers = visualization?.chartMarkers ?? [];
-  const chartTitle = visualization?.chartTitle;
+  const chartTitleShort = visualization?.chartTitleShort ?? visualization?.chartTitle;
+  const chartSubtitle = visualization?.chartSubtitle;
 
   const handleMouseMove = useCallback(
     (event: React.MouseEvent<SVGSVGElement>) => {
@@ -88,7 +86,6 @@ export function PnLChart({
       setHover({
         stockPrice: clampedPrice,
         x: relativeX,
-        y: event.clientY - rect.top,
         pnls,
       });
     },
@@ -127,8 +124,11 @@ export function PnLChart({
     : '';
 
   const markerColor = (type: string) => {
-    if (type === 'current') return 'var(--primary)';
-    if (type === 'breakeven') return 'rgba(34, 197, 94, 0.7)';
+    if (type === 'current') return 'rgba(255, 255, 255, 0.5)';
+    if (type === 'breakeven') return 'rgba(45, 243, 176, 0.7)';
+    if (type === 'strike') return '#f59e0b';
+    if (type === 'longStrike') return '#a78bfa';
+    if (type === 'shortStrike') return '#ff6b6b';
     return 'rgba(255, 255, 255, 0.35)';
   };
 
@@ -138,15 +138,14 @@ export function PnLChart({
   };
 
   return (
-    <div className="pnl-chart">
-      {chartTitle ? (
+    <div className="pnl-chart chart-container">
+      {chartTitleShort ? (
         <div className="chart-header">
-          <span className="chart-title-bold">{chartTitle}:</span>
-          {hover ? (
-            <span className="chart-title-details">
-              {' '}
-              ${hover.stockPrice.toFixed(2)} stock
-            </span>
+          <span className="chart-title-bold">{chartTitleShort}:</span>
+          {chartSubtitle ? (
+            <span className="chart-title-details"> {chartSubtitle}</span>
+          ) : hover ? (
+            <span className="chart-title-details"> ${hover.stockPrice.toFixed(2)} stock</span>
           ) : null}
         </div>
       ) : null}
@@ -203,7 +202,7 @@ export function PnLChart({
             x2={x(marker.value)}
             y2={height - padding.bottom}
             className={`marker-line marker-${marker.type}`}
-            stroke={markerColor(marker.type)}
+            stroke={marker.color ?? markerColor(marker.type)}
           />
         ))}
 
@@ -256,7 +255,7 @@ export function PnLChart({
 
       <div className="pnl-legend">
         {series.map((s) => (
-          <span key={s.id} className="legend-item">
+          <span key={s.id} className={`legend-item ${s.style === 'stock' ? 'long-stock' : ''}`}>
             <span className={`legend-line ${s.style}-line`} />
             <span className="legend-label">{s.label}</span>
           </span>
@@ -264,11 +263,18 @@ export function PnLChart({
         {markers.length ? <span className="legend-divider" /> : null}
         {markers.map((marker) => (
           <span key={`legend-${marker.type}-${marker.value}`} className="legend-item">
-            <span className={`legend-dash marker-${marker.type}`} />
+            <span
+              className={`legend-dash marker-${marker.type}`}
+              style={marker.color ? { borderTopColor: marker.color } : undefined}
+            />
             <span className="legend-label">{marker.label}</span>
           </span>
         ))}
       </div>
+
+      {visualization?.chartNote ? (
+        <p className="chart-model-note">{visualization.chartNote}</p>
+      ) : null}
     </div>
   );
 }

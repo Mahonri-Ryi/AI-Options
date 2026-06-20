@@ -1,8 +1,41 @@
-import type { CalculatorResult } from '@ai-options/core';
+import type { CalculatorResult, MetricItem } from '@ai-options/core';
 import './ResultsPanel.css';
 
 interface ResultsPanelProps {
   result: CalculatorResult | null;
+}
+
+function badgeClass(badge: MetricItem['badge']): string {
+  if (!badge) return '';
+  return `metric-badge ${badge.toLowerCase()}`;
+}
+
+function valueClass(variant?: MetricItem['variant']): string {
+  if (variant === 'profit' || variant === 'positive') return 'profit';
+  if (variant === 'loss' || variant === 'negative') return 'loss';
+  return 'neutral';
+}
+
+function secondaryClass(variant?: MetricItem['secondaryVariant']): string {
+  if (variant === 'profit' || variant === 'positive') return 'metric-secondary profit';
+  if (variant === 'loss' || variant === 'negative') return 'metric-secondary loss';
+  return 'metric-secondary';
+}
+
+function MetricValue({ item }: { item: MetricItem }) {
+  return (
+    <span className={`metric-value ${valueClass(item.variant)}`}>
+      {item.value}
+      {item.badge ? <span className={badgeClass(item.badge)}>{item.badge}</span> : null}
+      {item.secondary ? (
+        <span className={secondaryClass(item.secondaryVariant)}>
+          {item.secondary.startsWith('(') || item.secondary.startsWith('+') || item.secondary.startsWith('-')
+            ? ` ${item.secondary}`
+            : ` (${item.secondary})`}
+        </span>
+      ) : null}
+    </span>
+  );
 }
 
 export function ResultsPanel({ result }: ResultsPanelProps) {
@@ -25,7 +58,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
   }
 
   return (
-    <section className="results-panel card">
+    <section className="results-panel card metrics-panel">
       <h2 className="results-title">Key Metrics</h2>
       <div className="metrics-content">
         {sections.map((section, sectionIndex) => (
@@ -36,10 +69,13 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                 {section.items.map((item) => (
                   <div key={item.label} className="metric-row">
                     <span className="metric-row-label">{item.label}</span>
-                    <span className={`metric-row-value ${item.variant ?? 'neutral'}`}>
+                    <span className={`metric-row-value ${valueClass(item.variant)}`}>
                       {item.value}
                       {item.secondary ? (
-                        <span className="metric-secondary"> {item.secondary}</span>
+                        <span className={secondaryClass(item.secondaryVariant)}>
+                          {' '}
+                          {item.secondary}
+                        </span>
                       ) : null}
                     </span>
                   </div>
@@ -50,12 +86,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                 {section.items.map((item) => (
                   <div key={item.label} className="metric">
                     <span className="metric-label">{item.label}</span>
-                    <span className={`metric-value ${item.variant ?? 'neutral'}`}>
-                      {item.value}
-                      {item.secondary ? (
-                        <span className="metric-secondary"> {item.secondary}</span>
-                      ) : null}
-                    </span>
+                    <MetricValue item={item} />
                   </div>
                 ))}
               </div>
