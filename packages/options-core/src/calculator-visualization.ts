@@ -151,6 +151,7 @@ function buildMarkers(
     skipLegMarkers?: boolean;
     entryStockLabel?: boolean;
     breakevenShortLabel?: boolean;
+    skipBreakevenMarkers?: boolean;
   } = {},
 ): ChartMarker[] {
   const markers: ChartMarker[] = [];
@@ -188,13 +189,15 @@ function buildMarkers(
     });
   }
   const bePrefix = options.breakevenShortLabel ? 'B/E' : 'Breakeven';
-  for (const breakeven of result.metrics.breakevens) {
-    markers.push({
-      type: 'breakeven',
-      value: breakeven,
-      label: `${bePrefix}: $${breakeven.toFixed(2)}`,
-      color: '#2df3b0',
-    });
+  if (!options.skipBreakevenMarkers) {
+    for (const breakeven of result.metrics.breakevens) {
+      markers.push({
+        type: 'breakeven',
+        value: breakeven,
+        label: `${bePrefix}: $${breakeven.toFixed(2)}`,
+        color: '#2df3b0',
+      });
+    }
   }
   return markers;
 }
@@ -256,7 +259,6 @@ function longLegMetrics(
   ];
 
   if (result.greeks) {
-    const showIv = values.calculationMode === 'price';
     const greeksItems: MetricItem[] = [
       {
         label: 'Delta (Δ)',
@@ -267,13 +269,11 @@ function longLegMetrics(
         label: 'Theta (Θ)',
         value: `${result.greeks.theta.toFixed(3)}/day`,
       },
-    ];
-    if (showIv) {
-      greeksItems.push({
+      {
         label: 'Implied Vol',
         value: `${num(values, 'iv', 25).toFixed(1)}%`,
-      });
-    }
+      },
+    ];
     sections.push(gridSection('Greeks at Entry', greeksItems));
   }
 
@@ -316,6 +316,7 @@ function shortLegMetrics(
       gridSection('Greeks at Entry', [
         { label: 'Delta (Δ)', value: result.greeks.delta.toFixed(3) },
         { label: 'Gamma (Γ)', value: result.greeks.gamma.toFixed(4) },
+        { label: 'Theta (Θ)', value: result.greeks.theta.toFixed(3) },
         { label: 'Vega (ν)', value: result.greeks.vega.toFixed(3) },
       ]),
     );
@@ -389,6 +390,16 @@ function spreadMetrics(
     items.push(
       { label: shortLegLabel, value: `${shortIv.toFixed(1)}%` },
       { label: longLegLabel, value: `${longIv.toFixed(1)}%` },
+    );
+  } else {
+    const isCall =
+      calculatorId === 'bull-call-spread' || calculatorId === 'bear-call-spread';
+    const iv = num(values, 'iv', 25);
+    const longLegLabel = isCall ? 'Long Call IV' : 'Long Put IV';
+    const shortLegLabel = isCall ? 'Short Call IV' : 'Short Put IV';
+    items.push(
+      { label: longLegLabel, value: `${iv.toFixed(1)}%` },
+      { label: shortLegLabel, value: `${iv.toFixed(1)}%` },
     );
   }
 
@@ -507,7 +518,7 @@ export function buildCalculatorVisualization(
     case 'short-put':
       chartMarkers = buildMarkers(values, result, {
         strike: num(values, 'strike'),
-        breakevenShortLabel: true,
+        entryStockLabel: true,
       });
       metricSections = shortLegMetrics(result, values, quantity);
       break;
@@ -540,7 +551,7 @@ export function buildCalculatorVisualization(
       chartMarkers = buildMarkers(values, result, {
         strike,
         strikeLabel: 'Call Strike',
-        breakevenShortLabel: true,
+        entryStockLabel: true,
       });
       metricSections = [
         gridSection(undefined, [
@@ -583,7 +594,7 @@ export function buildCalculatorVisualization(
       const credit = premium * 100 * quantity;
       const assignedBasis = strike - premium;
       chartSeries = buildChartSeries(result, { quantity });
-      chartMarkers = buildMarkers(values, result, { strike, breakevenShortLabel: true });
+      chartMarkers = buildMarkers(values, result, { strike, entryStockLabel: true });
       metricSections = [
         gridSection(undefined, [
           { label: 'Cash Requirement', value: fmtMoney(cashRequirement) },
@@ -624,7 +635,16 @@ export function buildCalculatorVisualization(
         quantity,
         expirationLabel: `T+${shortDte} (Short Exp)`,
       });
-      chartMarkers = buildMarkers(values, result, { skipLegMarkers: true });
+      chartMarkers = buildMarkers(values, result, { skipLegMarkers: true, skipBreakevenMarkers: true });
+      const breakeven = metrics.breakevens[0];
+      if (breakeven !== undefined) {
+        chartMarkers.push({
+          type: 'breakeven',
+          value: breakeven,
+          label: `B/E (Short Exp): $${breakeven.toFixed(2)}`,
+          color: '#2df3b0',
+        });
+      }
       chartMarkers.push(
         {
           type: 'longStrike',
@@ -684,7 +704,7 @@ export function buildCalculatorVisualization(
     }
     case 'straddle':
     case 'strangle':
-      chartMarkers = buildMarkers(values, result);
+      chartMarkers = buildMarkers(values, result, { breakevenShortLabel: true });
       metricSections = multiLegVolatilityMetrics(
         result,
         values,
@@ -694,13 +714,29 @@ export function buildCalculatorVisualization(
       break;
     case 'iron-condor':
     case 'iron-butterfly':
-      chartMarkers = buildMarkers(values, result);
+      chartMarkers = buildMarkers(values, result, { breakevenShortLabel: true });
       metricSections = multiLegVolatilityMetrics(
         result,
         values,
         values.positionType === 'short',
         calculatorId,
       );
+      break;
+    case 'options-pricing':
+    case 'implied-volatility':
+      metricSections = [];
+      chartSeries = [];
+      chartMarkers = [];
+      break;
+    case 'expected-move':
+      metricSections = [];
+      chartSeries = [];
+      chartMarkers = [];
+      break;
+    case 'theta-decay':
+      metricSections = [];
+      chartSeries = [];
+      chartMarkers = [];
       break;
     default:
       chartMarkers = buildMarkers(values, result);

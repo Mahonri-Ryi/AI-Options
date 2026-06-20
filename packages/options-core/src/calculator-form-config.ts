@@ -111,7 +111,7 @@ export const CALCULATOR_FORM_META: Record<string, CalculatorFormMeta> = {
       shortSub: 'Collect credit',
       longSub: 'Pay debit',
     },
-    priceFieldLabel: { iv: 'IV', price: 'Price' },
+    priceFieldLabel: { iv: 'IV', price: 'Credit' },
   },
   strangle: {
     formMode: 'volatility-price',
@@ -125,7 +125,7 @@ export const CALCULATOR_FORM_META: Record<string, CalculatorFormMeta> = {
       shortSub: 'Collect credit',
       longSub: 'Pay debit',
     },
-    priceFieldLabel: { iv: 'IV', price: 'Price' },
+    priceFieldLabel: { iv: 'IV', price: 'Credit' },
   },
   'iron-condor': {
     formMode: 'volatility-price',
@@ -139,7 +139,7 @@ export const CALCULATOR_FORM_META: Record<string, CalculatorFormMeta> = {
       shortSub: 'Collect credit',
       longSub: 'Pay debit',
     },
-    priceFieldLabel: { iv: 'IV', price: 'Price' },
+    priceFieldLabel: { iv: 'IV', price: 'Credit' },
   },
   'iron-butterfly': {
     formMode: 'volatility-price',
@@ -153,7 +153,7 @@ export const CALCULATOR_FORM_META: Record<string, CalculatorFormMeta> = {
       shortSub: 'Collect credit',
       longSub: 'Pay debit',
     },
-    priceFieldLabel: { iv: 'IV', price: 'Price' },
+    priceFieldLabel: { iv: 'IV', price: 'Credit' },
   },
   'options-pricing': {
     formMode: 'pricing-tool',

@@ -10,6 +10,8 @@
     "build:web": "npm run build -w @ai-options/core && npm run build -w @ai-options/web",
     "test": "npm run test -w @ai-options/core",
     "check:refs": "bash scripts/check-no-external-refs.sh",
+    "qa:visual": "npm run build -w @ai-options/core && node scripts/visual-qa-audit.mjs",
+    "qa:screenshots": "npm run build -w @ai-options/core && node scripts/capture-calculator-screenshots.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "mobile": "npm run start -w @ai-options/mobile",
     "web": "npm run dev -w @ai-options/web",
@@ -17,5 +19,8 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.0"
   }
 }

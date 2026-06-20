@@ -417,6 +417,14 @@ export function straddle(inputs: StraddleInputs): CalculatorResult {
 
   const { maxProfit, maxLoss } = findMaxProfitLoss(expirationCurve);
 
+  const greeks = aggregateGreeks(
+    [callLeg, putLeg],
+    [
+      legGreeks(callLeg, inputs.stockPrice, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield),
+      legGreeks(putLeg, inputs.stockPrice, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield),
+    ],
+  );
+
   return {
     metrics: {
       maxProfit,
@@ -424,11 +432,13 @@ export function straddle(inputs: StraddleInputs): CalculatorResult {
       breakevens: findBreakevens(expirationCurve),
       netPremium: side === 'short' ? netPremium : -netPremium,
       premium: netPremium,
+      greeks,
     },
     curve: expirationCurve,
     theoreticalCurve,
     chartRange,
     chartAxes: buildChartAxes(chartRange, expirationCurve, theoreticalCurve),
+    greeks,
   };
 }
 
@@ -481,6 +491,14 @@ export function strangle(inputs: StrangleInputs): CalculatorResult {
 
   const { maxProfit, maxLoss } = findMaxProfitLoss(expirationCurve);
 
+  const greeks = aggregateGreeks(
+    [callLeg, putLeg],
+    [
+      legGreeks(callLeg, inputs.stockPrice, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield),
+      legGreeks(putLeg, inputs.stockPrice, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield),
+    ],
+  );
+
   return {
     metrics: {
       maxProfit,
@@ -488,11 +506,13 @@ export function strangle(inputs: StrangleInputs): CalculatorResult {
       breakevens: findBreakevens(expirationCurve),
       netPremium: side === 'short' ? netPremium : -netPremium,
       premium: netPremium,
+      greeks,
     },
     curve: expirationCurve,
     theoreticalCurve,
     chartRange,
     chartAxes: buildChartAxes(chartRange, expirationCurve, theoreticalCurve),
+    greeks,
   };
 }
 
@@ -540,6 +560,13 @@ export function ironCondor(inputs: IronCondorInputs): CalculatorResult {
   const callWidth = inputs.longCallStrike - inputs.shortCallStrike;
   const wingWidth = Math.max(putWidth, callWidth);
 
+  const greeks = aggregateGreeks(
+    legs,
+    legs.map((leg) =>
+      legGreeks(leg, inputs.stockPrice, inputs.dte, iv, inputs.riskFreeRate, inputs.dividendYield),
+    ),
+  );
+
   return {
     metrics: {
       maxProfit: netPremium * 100 * inputs.quantity,
@@ -547,11 +574,13 @@ export function ironCondor(inputs: IronCondorInputs): CalculatorResult {
       breakevens: findBreakevens(expirationCurve),
       netPremium,
       premium: netPremium,
+      greeks,
     },
     curve: expirationCurve,
     theoreticalCurve,
     chartRange,
     chartAxes: buildChartAxes(chartRange, expirationCurve, theoreticalCurve),
+    greeks,
   };
 }
 
