@@ -26,11 +26,13 @@ Professional options calculators for iOS, Android, and web. Model profit and los
 
 ```bash
 npm install
-npm test
+npm test           # 96 calculation accuracy tests
 npm run web        # Web dev server at http://localhost:5173
 npm run mobile     # Expo dev server
 npm run api        # API on :8001 (mock data without POLYGON_API_KEY)
 ```
+
+See `docs/TESTING.md` for details on the test suite.
 
 ### GitHub Pages setup
 

@@ -22,8 +22,8 @@ export function generatePriceRange(
   const allPrices = [stockPrice, ...strikes];
   const minStrike = Math.min(...allPrices);
   const maxStrike = Math.max(...allPrices);
-  const span = Math.max(maxStrike - minStrike, stockPrice * 0.1);
-  const padding = span * paddingPercent;
+  const span = Math.max(maxStrike - minStrike, stockPrice * 0.2);
+  const padding = Math.max(span * paddingPercent, stockPrice * 0.35);
   return {
     min: Math.max(0.01, minStrike - padding),
     max: maxStrike + padding,

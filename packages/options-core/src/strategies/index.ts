@@ -98,6 +98,23 @@ function resolvePremium(
   );
 }
 
+function singleLegMetrics(
+  leg: OptionLeg,
+  premium: number,
+): { maxProfit: number | 'unlimited'; maxLoss: number | 'unlimited' } {
+  const maxPremium = premium * 100 * leg.quantity;
+
+  if (leg.side === 'long') {
+    return { maxProfit: 'unlimited', maxLoss: maxPremium };
+  }
+
+  if (leg.type === 'call') {
+    return { maxProfit: maxPremium, maxLoss: 'unlimited' };
+  }
+
+  return { maxProfit: maxPremium, maxLoss: (leg.strike - premium) * 100 * leg.quantity };
+}
+
 function buildSingleLegResult(
   inputs: SingleLegInputs,
   atExpiration = true,
@@ -139,7 +156,7 @@ function buildSingleLegResult(
     range.max,
   );
 
-  const { maxProfit, maxLoss } = findMaxProfitLoss(curve);
+  const { maxProfit, maxLoss } = singleLegMetrics(leg, premium);
   const greeks = legGreeks(
     leg,
     inputs.stockPrice,
