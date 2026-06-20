@@ -47,21 +47,34 @@ describe('Calculator configs', () => {
     expect(result!.metrics.premium).toBeGreaterThan(0);
   });
 
-  it('theta-decay produces descending price curve', () => {
-    const result = computeCalculator('theta-decay', getDefaultValues('theta-decay'));
-    expect(result!.curve.length).toBeGreaterThan(1);
-    const first = result!.curve[0].pnl;
-    const last = result!.curve[result!.curve.length - 1].pnl;
-    expect(first).toBeGreaterThanOrEqual(last);
-  });
-
-  it('expected-move returns symmetric bounds', () => {
+  it('expected-move returns cone data and symmetric bounds', () => {
     const defaults = getDefaultValues('expected-move');
     const result = computeCalculator('expected-move', defaults);
     const stock = Number(defaults.stockPrice);
-    const upDist = (result!.metrics.maxProfit as number) - stock;
-    const downDist = stock - (result!.metrics.maxLoss as number);
+    const detail = result!.expectedMoveDetail!;
+    const upDist = detail.upperBound - stock;
+    const downDist = stock - detail.lowerBound;
     expect(Math.abs(upDist - downDist)).toBeLessThan(0.01);
+    expect(result!.expectedMoveCone?.length).toBe(Number(defaults.dte) + 1);
+  });
+
+  it('theta-decay produces analysis chart and metrics', () => {
+    const result = computeCalculator('theta-decay', getDefaultValues('theta-decay'));
+    expect(result!.thetaDecayDetail).toBeDefined();
+    expect(result!.thetaDecayChart?.decayCurve.length).toBeGreaterThan(1);
+    expect(result!.thetaDecayDetail!.entryPrice).toBeGreaterThanOrEqual(
+      result!.thetaDecayDetail!.expirationValue,
+    );
+  });
+
+  it('long-call price mode uses entered option price as premium', () => {
+    const defaults = getDefaultValues('long-call');
+    const result = computeCalculator('long-call', {
+      ...defaults,
+      calculationMode: 'price',
+      optionPrice: '3.25',
+    });
+    expect(result!.metrics.premium).toBeCloseTo(3.25, 2);
   });
 });
 

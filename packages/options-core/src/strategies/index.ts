@@ -742,4 +742,11 @@ export function optionsPricing(inputs: {
   return { price, greeks };
 }
 
-export { expectedMove, impliedVolatility, thetaDecayCurve } from '../math/volatility.js';
+export {
+  expectedMove,
+  expectedMoveCone,
+  expectedMoveDetail,
+  impliedVolatility,
+  thetaDecayAnalysis,
+  thetaDecayCurve,
+} from '../math/volatility.js';

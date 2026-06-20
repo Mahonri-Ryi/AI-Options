@@ -64,6 +64,53 @@ export interface CalculatorResult {
   chartRange?: ChartRange;
   chartAxes?: ChartAxes;
   greeks?: Greeks;
+  expectedMoveDetail?: ExpectedMoveDetail;
+  expectedMoveCone?: ExpectedMoveConePoint[];
+  thetaDecayDetail?: ThetaDecayDetail;
+  thetaDecayChart?: ThetaDecayChartData;
+}
+
+export interface ExpectedMoveConePoint {
+  dte: number;
+  upper: number;
+  lower: number;
+  expectedMove: number;
+}
+
+export interface ExpectedMoveDetail {
+  expectedMove: number;
+  upperBound: number;
+  lowerBound: number;
+  dailyMove: number;
+  weeklyMove: number;
+  movePercent: number;
+  probability: number;
+}
+
+export interface ThetaDecayPoint {
+  dte: number;
+  optionPrice: number;
+  intrinsicValue: number;
+  extrinsicValue: number;
+  theta: number;
+}
+
+export interface ThetaDecayDetail {
+  entryPrice: number;
+  expirationValue: number;
+  totalDecay: number;
+  totalDecayPercent: number;
+  currentTheta: number;
+  intrinsicValue: number;
+  extrinsicValue: number;
+  extrinsicHalfLifeDays: number | null;
+  entryDte: number;
+  moneyness: 'ITM' | 'ATM' | 'OTM';
+}
+
+export interface ThetaDecayChartData {
+  decayCurve: ThetaDecayPoint[];
+  intrinsicLine: ThetaDecayPoint[];
 }
 
 export type StrategyId =

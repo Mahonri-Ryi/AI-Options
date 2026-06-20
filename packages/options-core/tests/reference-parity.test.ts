@@ -67,14 +67,15 @@ describe('reference parity — bull call spread defaults', () => {
 });
 
 describe('reference parity — expected move defaults', () => {
-  it('matches reference expected move formula', () => {
+  it('matches reference expected move formula and cone', () => {
     const defaults = getDefaultValues('expected-move');
     const result = computeCalculator('expected-move', defaults)!;
     const ref = refExpectedMoveCalc(100, 30, 30);
 
-    expectCloseTo(result.metrics.maxProfit as number, ref.up, 0.01);
-    expectCloseTo(result.metrics.maxLoss as number, ref.down, 0.01);
-    expectCloseTo(result.metrics.netPremium, ref.moveDollars, 0.01);
+    expectCloseTo(result.expectedMoveDetail!.upperBound, ref.up, 0.01);
+    expectCloseTo(result.expectedMoveDetail!.lowerBound, ref.down, 0.01);
+    expectCloseTo(result.expectedMoveDetail!.expectedMove, ref.moveDollars, 0.01);
+    expect(result.expectedMoveCone?.length).toBe(31);
   });
 });
 

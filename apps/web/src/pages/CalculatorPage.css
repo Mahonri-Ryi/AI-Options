@@ -26,6 +26,25 @@
   padding: 1.5rem;
 }
 
+.form-panel-header {
+  margin-bottom: 0.25rem;
+}
+
+.chart-panel-full {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+}
+
+.calculator-page-wide .calc-layout-stacked {
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 900px) {
+  .calculator-page-wide .calc-layout-stacked {
+    grid-template-columns: 1fr;
+  }
+}
+
 .panel-title {
   margin: 0 0 1.25rem;
   font-size: 1.0625rem;

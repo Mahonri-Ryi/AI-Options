@@ -1,18 +1,49 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   CALCULATOR_CONFIGS,
   computeCalculator,
+  getCalculatorFormMode,
   getDefaultValues,
 } from '@ai-options/core';
+import { ExpectedMoveChart } from '../components/ExpectedMoveChart';
+import { ModeToggle } from '../components/ModeToggle';
 import { NumberField } from '../components/NumberField';
 import { PnLChart } from '../components/PnLChart';
 import { ResultsPanel } from '../components/ResultsPanel';
+import { ExpectedMoveResults, ThetaDecayResults } from '../components/SpecialResultsPanel';
+import { ThetaDecayChart } from '../components/ThetaDecayChart';
 import './CalculatorPage.css';
+import '../components/ModeToggle.css';
+
+function shouldShowField(
+  calculatorId: string,
+  fieldKey: string,
+  values: Record<string, string>,
+): boolean {
+  const formMode = getCalculatorFormMode(calculatorId);
+  const calcMode = values.calculationMode ?? 'iv';
+
+  if (fieldKey === 'iv') {
+    if (formMode === 'iv-price' || formMode === 'spread-price') return calcMode === 'iv';
+    return fieldKey === 'iv';
+  }
+  if (fieldKey === 'optionPrice') {
+    return formMode === 'iv-price' && calcMode === 'price';
+  }
+  if (fieldKey === 'longOptionPrice' || fieldKey === 'shortOptionPrice') {
+    return formMode === 'spread-price' && calcMode === 'price';
+  }
+  if (fieldKey === 'optionType' && calculatorId === 'theta-decay') {
+    return false;
+  }
+  return true;
+}
 
 export function CalculatorPage() {
   const { id = 'long-call' } = useParams();
   const config = CALCULATOR_CONFIGS[id];
+  const formMode = getCalculatorFormMode(id);
   const [values, setValues] = useState<Record<string, string>>(() => getDefaultValues(id));
   const [result, setResult] = useState(() => computeCalculator(id, getDefaultValues(id)));
 
@@ -31,6 +62,10 @@ export function CalculatorPage() {
   }
 
   const stockPrice = Number(values.stockPrice) || 0;
+  const visibleFields = useMemo(
+    () => config.fields.filter((field) => shouldShowField(id, field.key, values)),
+    [config.fields, id, values],
+  );
 
   const handleCalculate = () => {
     setResult(computeCalculator(id, values));
@@ -40,18 +75,47 @@ export function CalculatorPage() {
     setValues((prev) => ({ ...prev, [key]: value }));
   };
 
+  const isSpecialLayout = formMode === 'expected-move' || formMode === 'theta-decay';
+
   return (
-    <div className="page calculator-page">
+    <div className={`page calculator-page ${isSpecialLayout ? 'calculator-page-wide' : ''}`}>
       <header className="calc-header">
         <h1 className="calc-title">{config.title}</h1>
         <p className="calc-desc">Adjust parameters and calculate your profit/loss profile.</p>
       </header>
 
-      <div className="calc-layout">
+      <div className={`calc-layout ${isSpecialLayout ? 'calc-layout-stacked' : ''}`}>
         <section className="form-panel card">
-          <h2 className="panel-title">Option Parameters</h2>
+          <div className="form-panel-header">
+            <h2 className="panel-title">Option Parameters</h2>
+          </div>
+
+          {formMode === 'iv-price' || formMode === 'spread-price' ? (
+            <ModeToggle
+              label="Calculate with:"
+              value={values.calculationMode ?? 'iv'}
+              options={[
+                { value: 'iv', label: 'IV' },
+                { value: 'price', label: 'Price' },
+              ]}
+              onChange={(mode) => updateValue('calculationMode', mode)}
+            />
+          ) : null}
+
+          {formMode === 'theta-decay' ? (
+            <ModeToggle
+              label="Option Type:"
+              value={values.optionType ?? 'call'}
+              options={[
+                { value: 'call', label: 'Call' },
+                { value: 'put', label: 'Put' },
+              ]}
+              onChange={(type) => updateValue('optionType', type)}
+            />
+          ) : null}
+
           <div className="field-grid">
-            {config.fields.map((field) => (
+            {visibleFields.map((field) => (
               <NumberField
                 key={field.key}
                 label={field.label}
@@ -67,7 +131,13 @@ export function CalculatorPage() {
         </section>
 
         <div className="results-column">
-          <ResultsPanel result={result} />
+          {formMode === 'expected-move' && result?.expectedMoveDetail ? (
+            <ExpectedMoveResults detail={result.expectedMoveDetail} stockPrice={stockPrice} />
+          ) : formMode === 'theta-decay' && result?.thetaDecayDetail ? (
+            <ThetaDecayResults detail={result.thetaDecayDetail} />
+          ) : (
+            <ResultsPanel result={result} />
+          )}
 
           {id === 'implied-volatility' && result ? (
             <div className="highlight-card card">
@@ -75,39 +145,43 @@ export function CalculatorPage() {
               <span className="highlight-value">{result.metrics.premium.toFixed(2)}%</span>
             </div>
           ) : null}
-
-          {id === 'expected-move' && result ? (
-            <div className="move-grid">
-              <div className="move-card card">
-                <span className="move-label">Expected Down</span>
-                <span className="move-value">
-                  ${typeof result.metrics.maxLoss === 'number' ? result.metrics.maxLoss.toFixed(2) : '—'}
-                </span>
-              </div>
-              <div className="move-card card">
-                <span className="move-label">Expected Up</span>
-                <span className="move-value">
-                  ${typeof result.metrics.maxProfit === 'number' ? result.metrics.maxProfit.toFixed(2) : '—'}
-                </span>
-              </div>
-            </div>
-          ) : null}
-
-          {result && result.curve.length > 1 ? (
-            <section className="chart-panel card">
-              <h2 className="panel-title">
-                {id === 'theta-decay' ? 'Theta Decay Curve' : 'P/L Chart'}
-              </h2>
-              <PnLChart
-                data={result.curve}
-                theoreticalData={result.theoreticalCurve}
-                currentPrice={stockPrice}
-                chartAxes={result.chartAxes}
-              />
-            </section>
-          ) : null}
         </div>
       </div>
+
+      {formMode === 'expected-move' && result?.expectedMoveCone ? (
+        <section className="chart-panel card chart-panel-full">
+          <h2 className="panel-title">Expected Move Cone</h2>
+          <ExpectedMoveChart
+            cone={result.expectedMoveCone}
+            stockPrice={stockPrice}
+            maxDte={Number(values.dte) || 30}
+          />
+        </section>
+      ) : null}
+
+      {formMode === 'theta-decay' && result?.thetaDecayChart && result.thetaDecayDetail ? (
+        <section className="chart-panel card chart-panel-full">
+          <h2 className="panel-title">Theta Decay Curve</h2>
+          <ThetaDecayChart data={result.thetaDecayChart} entryDte={result.thetaDecayDetail.entryDte} />
+          <p className="chart-model-note">
+            {values.optionType === 'put'
+              ? 'Put prices calculated using the Black-Scholes model.'
+              : 'Call prices calculated using the Black-Scholes model.'}
+          </p>
+        </section>
+      ) : null}
+
+      {!isSpecialLayout && result && result.curve.length > 1 ? (
+        <section className="chart-panel card chart-panel-full">
+          <h2 className="panel-title">P/L Chart</h2>
+          <PnLChart
+            data={result.curve}
+            theoreticalData={result.theoreticalCurve}
+            currentPrice={stockPrice}
+            chartAxes={result.chartAxes}
+          />
+        </section>
+      ) : null}
     </div>
   );
 }
